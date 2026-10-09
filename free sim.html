@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <title>Catapult Physics Simulation</title>
+  <style>
+    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { margin: 0; padding: 20px; background: #1a1d20; color: #fff; display: flex; flex-direction: column; align-items: center; }
+    h1 { margin: 0 0 15px 0; font-size: 22px; color: #ffca28; }
+    .main-container { display: flex; flex-wrap: wrap; gap: 20px; width: 100%; max-width: 1250px; }
+    .canvas-container { flex: 1; min-width: 650px; background: #87CEEB; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+    canvas { display: block; width: 100%; height: 520px; }
+    .controls-panel { width: 340px; background: #26292d; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
+    .control-group { margin-bottom: 16px; }
+    .control-group label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; color: #cfd8dc; }
+    .control-group label span { font-weight: bold; color: #ffca28; }
+    input[type=range] { width: 100%; accent-color: #ff9800; cursor: pointer; }
+    .btn-group { display: flex; gap: 10px; margin-top: 15px; }
+    button { flex: 1; padding: 12px; border: none; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer; transition: 0.2s; }
+    .btn-fire { background: #e53935; color: white; }
+    .btn-fire:hover { background: #d32f2f; }
+    .btn-reset { background: #455a64; color: white; }
+    .btn-reset:hover { background: #37474f; }
+    .stats-box { margin-top: 18px; padding: 14px; background: #1b1e22; border-radius: 8px; font-size: 13px; line-height: 1.7; border-left: 4px solid #ffca28; }
+  </style>
+</head>
+<body>
+
+  <h1>🏹 Catapult Physics Simulator</h1>
+
+  <div class="main-container">
+    <div class="canvas-container">
+      <canvas id="simCanvas" width="900" height="520"></canvas>
+    </div>
+
+    <div class="controls-panel">
+      <!-- 1. Pull Angle -->
+      <div class="control-group">
+        <label>Pullback Angle: <span><span id="valPull">45</span>°</span></label>
+        <input type="range" id="paramPull" min="15" max="70" value="45">
+      </div>
+
+      <!-- 2. Arm Length -->
+      <div class="control-group">
+        <label>Arm Length (Hole): <span><span id="valArm">120</span> cm</span></label>
+        <input type="range" id="paramArm" min="80" max="150" step="10" value="120">
+      </div>
+
+      <!-- 3. Elastic Tension -->
+      <div class="control-group">
+        <label>Band Tension (Base Pin): <span><span id="valTension">3</span></span></label>
+        <input type="range" id="paramTension" min="1" max="5" step="1" value="3">
+      </div>
+
+      <!-- 4. Pivot Height -->
+      <div class="control-group">
+        <label>Pivot Height: <span><span id="valPivotH">90</span> cm</span></label>
+        <input type="range" id="paramPivotH" min="60" max="130" step="10" value="90">
+      </div>
+
+      <!-- 5. Platform Height -->
+      <div class="control-group">
+        <label>Platform Height: <span><span id="valPlatform">40</span> cm</span></label>
+        <input type="range" id="paramPlatform" min="0" max="150" step="10" value="40">
+      </div>
+
+      <div class="btn-group">
+        <button class="btn-fire" id="fireBtn">Launch 🚀</button>
+        <button class="btn-reset" id="resetBtn">Reset</button>
+      </div>
+
+      <div class="stats-box">
+        <strong>Telemetry:</strong><br>
+        Initial Velocity ($v_0$): <span id="statV0">0.00</span> m/s<br>
+        Horizontal Range ($R$): <span id="statRange">0.00</span> m<br>
+        Maximum Height ($H_{max}$): <span id="statMaxH">0.00</span> m
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const pPull = document.getElementById('paramPull');
+    const pArm = document.getElementById('paramArm');
+    const pTension = document.getElementById('paramTension');
+    const pPivotH = document.getElementById('paramPivotH');
+    const pPlatform = document.getElementById('paramPlatform');
+
+    const vPull = document.getElementById('valPull');
+    const vArm = document.getElementById('valArm');
+    const vTension = document.getElementById('valTension');
+    const vPivotH = document.getElementById('valPivotH');
+    const vPlatform = document.getElementById('valPlatform');
+
+    const statV0 = document.getElementById('statV0');
+    const statRange = document.getElementById('statRange');
+    const statMaxH = document.getElementById('statMaxH');
+
+    // Display & Physics setup
+    const PIXEL_SCALE = 1.0; 
+    const GROUND_Y = 460;
+    const BASE_X = 170;
+    const GRAVITY = 9.81 * 100; // cm/s^2
+
+    let state = 'ready'; // ready, firing, flying, finished
+    let currentArmAngle = 45; // angle in degrees pulled back (towards left)
+    const releaseAngle = -20; // stop angle where ball leaves cup (tilted forward right)
+    let angularVel = 0;
+
+    let ball = { x: 0, y: 0, vx: 0, vy: 0, radius: 10 };
+    let trajectory = [];
+
+    function updateLabels() {
+      vPull.innerText = pPull.value;
+      vArm.innerText = pArm.value;
+      vTension.innerText = pTension.value;
+      vPivotH.innerText = pPivotH.value;
+      vPlatform.innerText = pPlatform.value;
+    }
+
+    function getPivotCoords() {
+      const platH = parseFloat(pPlatform.value);
+      const pivH = parseFloat(pPivotH.value);
+      return {
+        x: BASE_X,
+        y: GROUND_Y - (platH + pivH) * PIXEL_SCALE,
+        platH_px: platH * PIXEL_SCALE
+      };
+    }
+
+    // Exact geometric cup coordinate relative to pivot
+    // θ = 0° is straight UP. Positive θ = pulled back (left), Negative θ = tilted forward (right)
+    function getCupCoords(pivot, armLengthCm, thetaDeg) {
+      const thetaRad = thetaDeg * (Math.PI / 180);
+      const armPx = armLengthCm * PIXEL_SCALE;
+      return {
+        x: pivot.x - armPx * Math.sin(thetaRad),
+        y: pivot.y - armPx * Math.cos(thetaRad)
+      };
+    }
+
+    function resetSimulation() {
+      state = 'ready';
+      currentArmAngle = parseFloat(pPull.value);
+      trajectory = [];
+      statV0.innerText = "0.00";
+      statRange.innerText = "0.00";
+      statMaxH.innerText = "0.00";
+
+      const pivot = getPivotCoords();
+      const armLen = parseFloat(pArm.value);
+      const cup = getCupCoords(pivot, armLen, currentArmAngle);
+      ball.x = cup.x;
+      ball.y = cup.y;
+
+      draw();
+    }
+
+    function fire() {
+      if (state !== 'ready') return;
+      state = 'firing';
+
+      const k = parseFloat(pTension.value) * 75;
+      const pullAngle = parseFloat(pPull.value);
+      const armLen = parseFloat(pArm.value);
+
+      // Elastic energy ~ 0.5 * k * delta_theta^2
+      const deltaTheta = (pullAngle - releaseAngle) * (Math.PI / 180);
+      const storedEnergy = 0.5 * k * Math.pow(deltaTheta, 2);
+      const inertia = (armLen / 100) * 1.6;
+      angularVel = Math.sqrt((2 * storedEnergy) / inertia) * (180 / Math.PI) * 0.45;
+    }
+
+    function updatePhysics(dt) {
+      const pivot = getPivotCoords();
+      const armLen = parseFloat(pArm.value);
+
+      if (state === 'firing') {
+        currentArmAngle -= angularVel * dt;
+
+        if (currentArmAngle <= releaseAngle) {
+          currentArmAngle = releaseAngle;
+          state = 'flying';
+
+          // Velocity vector perpendicular to arm at release point
+          const rMeters = armLen / 100;
+          const omegaRad = angularVel * (Math.PI / 180);
+          const linearSpeed = omegaRad * rMeters * 0.75; // m/s
+
+          // Direction of tangent: theta from horizontal
+          const releaseRad = releaseAngle * (Math.PI / 180);
+          ball.vx = linearSpeed * Math.cos(releaseRad) * 100; // cm/s (right)
+          ball.vy = -linearSpeed * Math.sin(releaseRad) * 100 - (linearSpeed * 70); // launch upward & forward
+
+          const cup = getCupCoords(pivot, armLen, currentArmAngle);
+          ball.x = cup.x;
+          ball.y = cup.y;
+          trajectory.push({ x: ball.x, y: ball.y });
+
+          statV0.innerText = linearSpeed.toFixed(2);
+        } else {
+          const cup = getCupCoords(pivot, armLen, currentArmAngle);
+          ball.x = cup.x;
+          ball.y = cup.y;
+        }
+      } else if (state === 'flying') {
+        ball.x += (ball.vx * dt) * PIXEL_SCALE;
+        ball.vy += (GRAVITY * dt);
+        ball.y += (ball.vy * dt) * PIXEL_SCALE;
+
+        trajectory.push({ x: ball.x, y: ball.y });
+
+        // Ground collision
+        if (ball.y >= GROUND_Y - ball.radius) {
+          ball.y = GROUND_Y - ball.radius;
+          state = 'finished';
+
+          const rangeCm = (ball.x - pivot.x) / PIXEL_SCALE;
+          statRange.innerText = Math.max(0, rangeCm / 100).toFixed(2);
+
+          let highestPoint = GROUND_Y;
+          trajectory.forEach(p => { if (p.y < highestPoint) highestPoint = p.y; });
+          const maxHeightCm = (GROUND_Y - highestPoint) / PIXEL_SCALE;
+          statMaxH.innerText = (maxHeightCm / 100).toFixed(2);
+        }
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Sky background
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+      skyGrad.addColorStop(0, '#7ac1eb');
+      skyGrad.addColorStop(1, '#c5edfd');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, canvas.width, GROUND_Y);
+
+      // Ground
+      ctx.fillStyle = '#558b2f';
+      ctx.fillRect(0, GROUND_Y, canvas.width, canvas.height - GROUND_Y);
+      ctx.fillStyle = '#33691e';
+      ctx.fillRect(0, GROUND_Y, canvas.width, 6);
+
+      const pivot = getPivotCoords();
+      const armLen = parseFloat(pArm.value);
+      const platH_px = pivot.platH_px;
+      const baseTop = GROUND_Y - platH_px;
+
+      // Platform
+      if (platH_px > 0) {
+        ctx.fillStyle = '#4e342e';
+        ctx.fillRect(BASE_X - 60, baseTop, 120, platH_px);
+        ctx.strokeStyle = '#2d1b17';
+        ctx.strokeRect(BASE_X - 60, baseTop, 120, platH_px);
+      }
+
+      // Wooden Frame
+      ctx.beginPath();
+      ctx.moveTo(BASE_X - 50, baseTop);
+      ctx.lineTo(BASE_X + 45, baseTop);
+      ctx.lineTo(pivot.x, pivot.y);
+      ctx.closePath();
+      ctx.fillStyle = '#a16b47';
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#5c381e';
+      ctx.stroke();
+
+      // Multi-height pivot holes
+      for (let i = 0; i < 5; i++) {
+        const hy = baseTop - 35 - (i * 18);
+        ctx.beginPath();
+        ctx.arc(BASE_X, hy, 4, 0, Math.PI * 2);
+        ctx.fillStyle = '#2c1708';
+        ctx.fill();
+      }
+
+      // Elastic Band
+      const anchorX = BASE_X + 25;
+      const anchorY = baseTop - 10 - (pTension.value * 4);
+      const elasticPoint = getCupCoords(pivot, armLen * 0.45, currentArmAngle);
+
+      ctx.beginPath();
+      ctx.moveTo(anchorX, anchorY);
+      ctx.lineTo(elasticPoint.x, elasticPoint.y);
+      ctx.strokeStyle = '#e53935';
+      ctx.lineWidth = 3 + parseInt(pTension.value);
+      ctx.stroke();
+
+      // Lever Arm
+      ctx.save();
+      ctx.translate(pivot.x, pivot.y);
+      ctx.rotate(-currentArmAngle * (Math.PI / 180));
+
+      const armPx = armLen * PIXEL_SCALE;
+      ctx.fillStyle = '#8d5b34';
+      ctx.fillRect(-7, -armPx, 14, armPx + 15);
+      ctx.strokeStyle = '#4e2c11';
+      ctx.strokeRect(-7, -armPx, 14, armPx + 15);
+
+      // Arm adjustment holes
+      for (let h = 25; h < armPx; h += 20) {
+        ctx.beginPath();
+        ctx.arc(0, -h, 3, 0, Math.PI * 2);
+        ctx.fillStyle = '#2c1708';
+        ctx.fill();
+      }
+
+      // Cup
+      ctx.beginPath();
+      ctx.arc(0, -armPx, 12, 0, Math.PI);
+      ctx.fillStyle = '#b08456';
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+
+      // Center Pin
+      ctx.beginPath();
+      ctx.arc(pivot.x, pivot.y, 6, 0, Math.PI * 2);
+      ctx.fillStyle = '#cfd8dc';
+      ctx.fill();
+      ctx.stroke();
+
+      // Ball
+      const cup = getCupCoords(pivot, armLen, currentArmAngle);
+      const bx = (state === 'flying' || state === 'finished') ? ball.x : cup.x;
+      const by = (state === 'flying' || state === 'finished') ? ball.y : cup.y;
+
+      ctx.beginPath();
+      ctx.arc(bx, by, ball.radius, 0, Math.PI * 2);
+      ctx.fillStyle = '#ff6f00';
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#fff';
+      ctx.stroke();
+
+      // Trajectory path
+      if (trajectory.length > 1) {
+        ctx.beginPath();
+        ctx.setLineDash([5, 4]);
+        ctx.moveTo(trajectory[0].x, trajectory[0].y);
+        for (let i = 1; i < trajectory.length; i++) {
+          ctx.lineTo(trajectory[i].x, trajectory[i].y);
+        }
+        ctx.strokeStyle = 'rgba(230, 81, 0, 0.85)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    let lastTime = performance.now();
+    function loop(currentTime) {
+      const dt = Math.min((currentTime - lastTime) / 1000, 0.05);
+      lastTime = currentTime;
+
+      if (state === 'firing' || state === 'flying') {
+        updatePhysics(dt);
+      }
+
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    [pPull, pArm, pTension, pPivotH, pPlatform].forEach(input => {
+      input.addEventListener('input', () => {
+        updateLabels();
+        if (state === 'ready') {
+          currentArmAngle = parseFloat(pPull.value);
+          const pivot = getPivotCoords();
+          const cup = getCupCoords(pivot, parseFloat(pArm.value), currentArmAngle);
+          ball.x = cup.x;
+          ball.y = cup.y;
+        }
+      });
+    });
+
+    document.getElementById('fireBtn').addEventListener('click', fire);
+    document.getElementById('resetBtn').addEventListener('click', resetSimulation);
+
+    updateLabels();
+    resetSimulation();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

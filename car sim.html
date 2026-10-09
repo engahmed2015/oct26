@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2-Motor RC Car Circuit Simulator</title>
+  <style>
+    :root {
+      --bg: #1a1b24;
+      --board: #252836;
+      --pos-color: #e63946;
+      --neg-color: #00b4d8;
+      --border-color: #3f4258;
+      --motor-yellow: #ffd166;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+    }
+
+    body {
+      margin: 0;
+      padding: 15px;
+      min-height: 100vh;
+      background-color: var(--bg);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 6px;
+    }
+
+    header h1 {
+      margin: 0 0 6px 0;
+      font-size: 1.45rem;
+      color: #f7fff7;
+    }
+
+    .legend {
+      display: flex;
+      gap: 25px;
+      margin: 4px 0 10px 0;
+      font-size: 0.9rem;
+      font-weight: bold;
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .legend-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 4px;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 12px;
+      align-items: center;
+    }
+
+    button {
+      background: #e63946;
+      border: none;
+      color: white;
+      padding: 8px 22px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: bold;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    button:hover { background: #d62828; }
+    button:active { transform: scale(0.96); }
+
+    .status-panel {
+      font-size: 0.95rem;
+      font-weight: 700;
+      padding: 6px 18px;
+      border-radius: 6px;
+      background: #333647;
+      color: #ffd166;
+      border: 1px solid #4a4e69;
+    }
+
+    /* Workspace */
+    #workspace {
+      position: relative;
+      width: 1050px;
+      height: 600px;
+      background: var(--board);
+      border-radius: 16px;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
+      border: 2px solid var(--border-color);
+      overflow: hidden;
+    }
+
+    #wires-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .wire-path {
+      stroke-width: 4.5px;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      pointer-events: stroke;
+      cursor: pointer;
+      transition: stroke-width 0.2s, filter 0.2s;
+    }
+
+    .wire-path:hover {
+      stroke-width: 8px;
+      filter: drop-shadow(0 0 10px #fff);
+    }
+
+    .wire-path.pos {
+      stroke: var(--pos-color);
+      filter: drop-shadow(0 0 4px rgba(230, 57, 70, 0.5));
+    }
+
+    .wire-path.neg {
+      stroke: var(--neg-color);
+      filter: drop-shadow(0 0 4px rgba(0, 180, 216, 0.5));
+    }
+
+    .wire-path.short {
+      stroke: #ffd166;
+      stroke-dasharray: 8 4;
+      animation: dash 1s linear infinite;
+      filter: drop-shadow(0 0 8px #ff9e00);
+    }
+
+    @keyframes dash {
+      to { stroke-dashoffset: -24; }
+    }
+
+    .temp-wire {
+      stroke-width: 3px;
+      stroke-dasharray: 6 4;
+      stroke-linecap: round;
+      fill: none;
+    }
+
+    /* Nodes (Terminals) */
+    .node {
+      width: 26px;
+      height: 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      position: relative;
+      z-index: 12;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 1.1rem;
+      transition: all 0.2s;
+    }
+
+    .node-pos {
+      background: rgba(230, 57, 70, 0.25);
+      border: 2px solid var(--pos-color);
+      color: var(--pos-color);
+    }
+
+    .node-neg {
+      background: rgba(0, 180, 216, 0.25);
+      border: 2px solid var(--neg-color);
+      color: var(--neg-color);
+    }
+
+    .node:hover { transform: scale(1.25); }
+
+    .node.selected {
+      transform: scale(1.3);
+      box-shadow: 0 0 15px #fff;
+      background: #fff;
+      color: #000;
+    }
+
+    /* Battery - Vertical Orientation */
+    .battery-container {
+      position: absolute;
+      top: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      z-index: 8;
+    }
+
+    .battery-body {
+      width: 58px;
+      height: 140px;
+      background: #111317;
+      border: 3px solid #ffffff;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-around;
+      box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+      position: relative;
+      overflow: visible;
+      transition: all 0.3s;
+    }
+
+    .battery-cell {
+      width: 100%;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 0.95rem;
+      letter-spacing: 1px;
+    }
+    .cell-neg { background: #0077b6; color: #fff; border-radius: 4px 4px 0 0; }
+    .cell-pos { background: #d90429; color: #fff; border-radius: 0 0 4px 4px; }
+
+    .battery-burned {
+      background: #250909 !important;
+      border-color: #ff3300 !important;
+      box-shadow: 0 0 40px #ff2200, 0 0 70px #ff7700 !important;
+      animation: shake 0.2s infinite alternate;
+    }
+
+    @keyframes shake {
+      0% { transform: translate(1px, 1px) rotate(0deg); }
+      100% { transform: translate(-1px, -2px) rotate(-1deg); }
+    }
+
+    .flame-icon {
+      position: absolute;
+      top: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 2.8rem;
+      display: none;
+      animation: flicker 0.3s infinite alternate;
+      pointer-events: none;
+    }
+
+    @keyframes flicker {
+      0% { transform: translateX(-50%) scale(1) translateY(0); filter: drop-shadow(0 0 10px #ff5400); }
+      100% { transform: translateX(-50%) scale(1.15) translateY(-5px); filter: drop-shadow(0 0 25px #ffdd00); }
+    }
+
+    .battery-burned .flame-icon { display: block; }
+
+    /* Switches */
+    .switch-wrapper {
+      position: absolute;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      z-index: 15;
+    }
+
+    .switch-box {
+      width: 75px;
+      height: 44px;
+      background: rgba(22, 23, 30, 0.95);
+      border: 2px solid #5a5d7a;
+      border-radius: 6px;
+      position: relative;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      transition: all 0.2s;
+    }
+
+    .switch-box:hover {
+      border-color: #ffbe0b;
+      box-shadow: 0 0 10px rgba(255, 190, 11, 0.4);
+    }
+
+    .switch-box.bypassed {
+      border-color: #e63946;
+      box-shadow: 0 0 15px rgba(230, 57, 70, 0.6);
+    }
+
+    .switch-box.bypassed::after {
+      content: '✕';
+      position: absolute;
+      font-size: 1.8rem;
+      font-weight: 900;
+      color: rgba(230, 57, 70, 0.8);
+      pointer-events: none;
+    }
+
+    .switch-svg {
+      width: 60px;
+      height: 36px;
+    }
+
+    .switch-contact { fill: #ffbe0b; }
+    .switch-lever {
+      stroke: #00b4d8;
+      stroke-width: 3.5px;
+      stroke-linecap: round;
+      transform-origin: 18px 23px;
+      transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .switch-box.closed .switch-lever {
+      transform: rotate(24deg);
+      stroke: #06d6a0;
+    }
+
+    .switch-label {
+      position: absolute;
+      bottom: 2px;
+      font-size: 0.6rem;
+      color: #a0a4b8;
+      font-weight: bold;
+    }
+
+    /* Comic Speech Bubbles */
+    .comic-bubble {
+      position: absolute;
+      bottom: 55px;
+      left: 50%;
+      transform: translateX(-50%) scale(0.6);
+      background: #fff;
+      color: #111;
+      padding: 6px 12px;
+      border-radius: 14px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      white-space: nowrap;
+      box-shadow: 0 6px 15px rgba(0,0,0,0.5);
+      border: 2px solid #111;
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      pointer-events: none;
+      z-index: 25;
+    }
+
+    .comic-bubble::after {
+      content: '';
+      position: absolute;
+      bottom: -7px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-width: 7px 7px 0;
+      border-style: solid;
+      border-color: #fff transparent;
+      display: block;
+      width: 0;
+    }
+
+    .comic-bubble.show {
+      opacity: 1;
+      transform: translateX(-50%) scale(1);
+    }
+
+    /* Car Chassis */
+    .chassis {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 470px;
+      height: 350px;
+      background: #532d18;
+      border-radius: 20px;
+      border: 4px solid #7c4224;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.7), 0 10px 25px rgba(0,0,0,0.5);
+      display: flex;
+      justify-content: space-between;
+      padding: 20px 10px;
+      transition: transform 0.4s ease;
+    }
+
+    /* Directional Movements */
+    .chassis.moving-forward {
+      transform: translateX(-50%) translateY(-18px);
+      box-shadow: 0 15px 35px rgba(6, 214, 160, 0.4);
+    }
+    .chassis.moving-backward {
+      transform: translateX(-50%) translateY(18px);
+      box-shadow: 0 15px 35px rgba(230, 57, 70, 0.4);
+    }
+    .chassis.turning-left {
+      transform: translateX(-50%) rotate(-6deg);
+    }
+    .chassis.turning-right {
+      transform: translateX(-50%) rotate(6deg);
+    }
+    .chassis.spin-left {
+      transform: translateX(-50%) rotate(-15deg);
+      box-shadow: 0 0 25px rgba(255, 190, 11, 0.6);
+    }
+    .chassis.spin-right {
+      transform: translateX(-50%) rotate(15deg);
+      box-shadow: 0 0 25px rgba(255, 190, 11, 0.6);
+    }
+
+    /* Caster Wheel */
+    .caster-wheel {
+      position: absolute;
+      top: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 38px;
+      height: 48px;
+      background: #e2eafc;
+      border-radius: 12px;
+      border: 3px solid #6c757d;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+    }
+
+    /* Motor & Wheel Module */
+    .motor-assembly {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .motor-body {
+      width: 80px;
+      height: 180px;
+      background: #ffd166;
+      border: 3.5px solid #b78a00;
+      border-radius: 10px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      color: #333;
+      font-size: 0.95rem;
+      box-shadow: 0 5px 12px rgba(0,0,0,0.4);
+    }
+
+    .motor-body::before {
+      content: '';
+      position: absolute;
+      top: -14px;
+      width: 36px;
+      height: 14px;
+      background: #adb5bd;
+      border: 2px solid #495057;
+      border-radius: 5px 5px 0 0;
+    }
+
+    .wheel {
+      width: 34px;
+      height: 145px;
+      background: #111;
+      border: 3px solid #f77f00;
+      border-radius: 6px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-around;
+      box-shadow: 0 5px 12px rgba(0,0,0,0.6);
+    }
+
+    .tire-thread {
+      width: 100%;
+      height: 9px;
+      background: #333;
+    }
+
+    .wheel.spinning-forward .tire-thread {
+      animation: wheelRollForward 0.2s linear infinite;
+    }
+    .wheel.spinning-reverse .tire-thread {
+      animation: wheelRollReverse 0.2s linear infinite;
+    }
+
+    @keyframes wheelRollForward {
+      0% { transform: translateY(-9px); }
+      100% { transform: translateY(9px); }
+    }
+
+    @keyframes wheelRollReverse {
+      0% { transform: translateY(9px); }
+      100% { transform: translateY(-9px); }
+    }
+
+    .motor-terminals-col {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 150px;
+      z-index: 12;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>2-Motor RC Car Circuit Simulator</h1>
+  </header>
+
+  <div class="legend">
+    <span><div class="legend-dot" style="background: var(--pos-color);"></div> Positive Terminal / Wire (+) - Red</span>
+    <span><div class="legend-dot" style="background: var(--neg-color);"></div> Negative Terminal / Wire (-) - Blue</span>
+  </div>
+
+  <div class="toolbar">
+    <button id="clear-btn">Reset Circuit</button>
+    <div class="status-panel" id="status-panel">Robot Status: Stopped 🛑</div>
+  </div>
+
+  <div id="workspace">
+    <svg id="wires-layer">
+      <path id="temp-line" class="temp-wire" d=""></path>
+    </svg>
+
+    <!-- Battery -->
+    <div class="battery-container">
+      <div class="node node-neg" id="bat_neg" data-polarity="neg" data-parent="battery" title="Battery Negative (-)">-</div>
+      <div class="battery-body" id="battery-body">
+        <div class="flame-icon">🔥</div>
+        <div class="battery-cell cell-neg">-</div>
+        <div class="battery-cell cell-pos">+</div>
+      </div>
+      <div class="node node-pos" id="bat_pos" data-polarity="pos" data-parent="battery" title="Battery Positive (+)">+</div>
+    </div>
+
+    <!-- Left Motor Switch (SW1) - Negative Terminals -->
+    <div class="switch-wrapper" id="sw-wrap-1" style="left: 170px; top: 120px;">
+      <div class="comic-bubble" id="bubble-sw1">You bypassed me! 😅</div>
+      <div class="node node-neg" id="sw1_in" data-polarity="neg" data-parent="sw1" title="Left Switch Negative Input (-)">-</div>
+      <div class="switch-box" id="sw1_box" title="Click to Toggle Left Switch">
+        <svg class="switch-svg" viewBox="0 0 60 36">
+          <circle class="switch-contact" cx="18" cy="23" r="3.5" />
+          <circle class="switch-contact" cx="44" cy="23" r="3.5" />
+          <line class="switch-lever" x1="18" y1="23" x2="43" y2="10" />
+        </svg>
+        <span class="switch-label">SW L</span>
+      </div>
+      <div class="node node-neg" id="sw1_out" data-polarity="neg" data-parent="sw1" title="Left Switch Negative Output (-)">-</div>
+    </div>
+
+    <!-- Right Motor Switch (SW2) - Negative Terminals -->
+    <div class="switch-wrapper" id="sw-wrap-2" style="right: 170px; top: 120px;">
+      <div class="comic-bubble" id="bubble-sw2">You bypassed me! 😅</div>
+      <div class="node node-neg" id="sw2_in" data-polarity="neg" data-parent="sw2" title="Right Switch Negative Input (-)">-</div>
+      <div class="switch-box" id="sw2_box" title="Click to Toggle Right Switch">
+        <svg class="switch-svg" viewBox="0 0 60 36">
+          <circle class="switch-contact" cx="18" cy="23" r="3.5" />
+          <circle class="switch-contact" cx="44" cy="23" r="3.5" />
+          <line class="switch-lever" x1="18" y1="23" x2="43" y2="10" />
+        </svg>
+        <span class="switch-label">SW R</span>
+      </div>
+      <div class="node node-neg" id="sw2_out" data-polarity="neg" data-parent="sw2" title="Right Switch Negative Output (-)">-</div>
+    </div>
+
+    <!-- Car Chassis -->
+    <div class="chassis" id="car-chassis">
+      <div class="caster-wheel" title="Front Caster Wheel"></div>
+
+      <!-- Left Motor & Wheel (M1) -->
+      <div class="motor-assembly" id="assembly-m1">
+        <div class="comic-bubble" id="bubble-m1">Where is the power? 🤔</div>
+        <div class="wheel" id="wheel-left">
+          <div class="tire-thread"></div><div class="tire-thread"></div><div class="tire-thread"></div>
+          <div class="tire-thread"></div><div class="tire-thread"></div>
+        </div>
+        <div class="motor-body">MOTOR L</div>
+        <div class="motor-terminals-col">
+          <div class="node node-neg" id="m1_neg" data-polarity="neg" data-parent="m1" title="Motor L Negative Terminal (-)">-</div>
+          <div class="node node-pos" id="m1_pos" data-polarity="pos" data-parent="m1" title="Motor L Positive Terminal (+)">+</div>
+        </div>
+      </div>
+
+      <!-- Right Motor & Wheel (M2) -->
+      <div class="motor-assembly" id="assembly-m2">
+        <div class="comic-bubble" id="bubble-m2">Where is the power? 🤔</div>
+        <div class="motor-terminals-col">
+          <div class="node node-neg" id="m2_neg" data-polarity="neg" data-parent="m2" title="Motor R Negative Terminal (-)">-</div>
+          <div class="node node-pos" id="m2_pos" data-polarity="pos" data-parent="m2" title="Motor R Positive Terminal (+)">+</div>
+        </div>
+        <div class="motor-body">MOTOR R</div>
+        <div class="wheel" id="wheel-right">
+          <div class="tire-thread"></div><div class="tire-thread"></div><div class="tire-thread"></div>
+          <div class="tire-thread"></div><div class="tire-thread"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const workspace = document.getElementById('workspace');
+    const wiresLayer = document.getElementById('wires-layer');
+    const tempLine = document.getElementById('temp-line');
+    const clearBtn = document.getElementById('clear-btn');
+    const nodes = document.querySelectorAll('.node');
+    const batteryBody = document.getElementById('battery-body');
+    const carChassis = document.getElementById('car-chassis');
+    const wheelLeft = document.getElementById('wheel-left');
+    const wheelRight = document.getElementById('wheel-right');
+    const statusPanel = document.getElementById('status-panel');
+
+    let selectedNode = null;
+    let wires = [];
+
+    const switches = {
+      sw1: { closed: false, box: document.getElementById('sw1_box'), inNode: 'sw1_in', outNode: 'sw1_out' },
+      sw2: { closed: false, box: document.getElementById('sw2_box'), inNode: 'sw2_in', outNode: 'sw2_out' }
+    };
+
+    /* ================= Web Audio API Sounds ================= */
+    let audioCtx = null;
+    let alarmOsc = null, alarmGain = null, isAlarmPlaying = false;
+
+    function initAudio() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    function playClickSound() {
+      initAudio();
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(400, now);
+      osc.frequency.exponentialRampToValueAtTime(80, now + 0.05);
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.linearRampToValueAtTime(0.01, now + 0.06);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(now + 0.06);
+    }
+
+    function startAlarmSound() {
+      if (isAlarmPlaying) return;
+      try {
+        initAudio();
+        alarmOsc = audioCtx.createOscillator();
+        alarmGain = audioCtx.createGain();
+        alarmOsc.type = 'sawtooth';
+        const now = audioCtx.currentTime;
+        alarmOsc.frequency.setValueAtTime(650, now);
+        let cycleTime = now;
+        for (let i = 0; i < 40; i++) {
+          alarmOsc.frequency.linearRampToValueAtTime(950, cycleTime + 0.25);
+          alarmOsc.frequency.linearRampToValueAtTime(650, cycleTime + 0.5);
+          cycleTime += 0.5;
+        }
+        alarmGain.gain.setValueAtTime(0.15, now);
+        alarmOsc.connect(alarmGain);
+        alarmGain.connect(audioCtx.destination);
+        alarmOsc.start();
+        isAlarmPlaying = true;
+      } catch (err) {}
+    }
+
+    function stopAlarmSound() {
+      if (!isAlarmPlaying) return;
+      try {
+        if (alarmGain && audioCtx) {
+          alarmGain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+          setTimeout(() => {
+            if (alarmOsc) { alarmOsc.stop(); alarmOsc.disconnect(); }
+            isAlarmPlaying = false;
+          }, 100);
+        }
+      } catch (e) { isAlarmPlaying = false; }
+    }
+
+    function getNodeCenter(nodeId) {
+      const el = document.getElementById(nodeId);
+      const wsRect = workspace.getBoundingClientRect();
+      const rect = el.getBoundingClientRect();
+      return {
+        x: (rect.left + rect.width / 2) - wsRect.left,
+        y: (rect.top + rect.height / 2) - wsRect.top
+      };
+    }
+
+    /* ================= Switch Toggles ================= */
+    ['sw1', 'sw2'].forEach(key => {
+      const swObj = switches[key];
+      swObj.box.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playClickSound();
+        swObj.closed = !swObj.closed;
+        if (swObj.closed) {
+          swObj.box.classList.add('closed');
+        } else {
+          swObj.box.classList.remove('closed');
+        }
+        checkCircuits();
+      });
+    });
+
+    /* ================= Path Generation ================= */
+    function generateGeometricPath(nodeA, nodeB) {
+      const pA = getNodeCenter(nodeA);
+      const pB = getNodeCenter(nodeB);
+
+      const elA = document.getElementById(nodeA);
+      const elB = document.getElementById(nodeB);
+      const parentA = elA.dataset.parent;
+      const parentB = elB.dataset.parent;
+
+      // Self Loop: Motor
+      if (parentA === parentB && parentA.startsWith('m')) {
+        const midX = (parentA === 'm1') ? pA.x + 55 : pA.x - 55;
+        return `M ${pA.x} ${pA.y} C ${midX} ${pA.y}, ${midX} ${pB.y}, ${pB.x} ${pB.y}`;
+      }
+
+      // Self Loop: Battery Short
+      if (parentA === 'battery' && parentB === 'battery') {
+        const sideX = Math.max(pA.x, pB.x) + 65;
+        return `M ${pA.x} ${pA.y} C ${sideX} ${pA.y}, ${sideX} ${pB.y}, ${pB.x} ${pB.y}`;
+      }
+
+      // Self Loop: Switch Bypass
+      if (parentA === parentB && parentA.startsWith('sw')) {
+        const bottomY = Math.max(pA.y, pB.y) + 40;
+        return `M ${pA.x} ${pA.y} C ${pA.x} ${bottomY}, ${pB.x} ${bottomY}, ${pB.x} ${pB.y}`;
+      }
+
+      // Smooth Bezier Curve
+      const midY = (pA.y + pB.y) / 2;
+      return `M ${pA.x} ${pA.y} C ${pA.x} ${midY}, ${pB.x} ${midY}, ${pB.x} ${pB.y}`;
+    }
+
+    /* ================= Wiring Interaction ================= */
+    nodes.forEach(node => {
+      node.addEventListener('click', (e) => {
+        e.stopPropagation();
+        initAudio();
+        const nodeId = node.id;
+
+        if (!selectedNode) {
+          selectedNode = nodeId;
+          node.classList.add('selected');
+          const pol = node.dataset.polarity;
+          tempLine.style.stroke = (pol === 'pos') ? 'var(--pos-color)' : 'var(--neg-color)';
+        } else if (selectedNode === nodeId) {
+          node.classList.remove('selected');
+          selectedNode = null;
+          tempLine.setAttribute('d', '');
+        } else {
+          addWire(selectedNode, nodeId);
+          document.getElementById(selectedNode).classList.remove('selected');
+          selectedNode = null;
+          tempLine.setAttribute('d', '');
+        }
+      });
+    });
+
+    workspace.addEventListener('mousemove', (e) => {
+      if (!selectedNode) return;
+      const wsRect = workspace.getBoundingClientRect();
+      const p1 = getNodeCenter(selectedNode);
+      const curX = e.clientX - wsRect.left;
+      const curY = e.clientY - wsRect.top;
+      tempLine.setAttribute('d', `M ${p1.x} ${p1.y} L ${curX} ${curY}`);
+    });
+
+    workspace.addEventListener('click', () => {
+      if (selectedNode) {
+        document.getElementById(selectedNode).classList.remove('selected');
+        selectedNode = null;
+        tempLine.setAttribute('d', '');
+      }
+    });
+
+    function addWire(nodeA, nodeB) {
+      const exists = wires.some(w => 
+        (w.from === nodeA && w.to === nodeB) || (w.from === nodeB && w.to === nodeA)
+      );
+      if (exists) return;
+
+      const elA = document.getElementById(nodeA);
+      const elB = document.getElementById(nodeB);
+      const isShort = (elA.dataset.parent === elB.dataset.parent);
+      const isSwitchBypass = isShort && elA.dataset.parent.startsWith('sw');
+
+      let wireType = 'pos';
+      if (isShort) {
+        wireType = 'short';
+      } else if (elA.dataset.polarity === 'neg' || elB.dataset.polarity === 'neg') {
+        wireType = 'neg';
+      }
+
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('class', `wire-path ${wireType}`);
+      path.setAttribute('d', generateGeometricPath(nodeA, nodeB));
+
+      const wireData = {
+        id: 'wire_' + Date.now() + Math.random(),
+        from: nodeA,
+        to: nodeB,
+        parentA: elA.dataset.parent,
+        parentB: elB.dataset.parent,
+        isShort: isShort,
+        isSwitchBypass: isSwitchBypass,
+        element: path,
+        type: wireType
+      };
+
+      path.addEventListener('click', (e) => {
+        e.stopPropagation();
+        removeWire(wireData.id);
+      });
+
+      wiresLayer.appendChild(path);
+      wires.push(wireData);
+      checkCircuits();
+    }
+
+    function removeWire(wireId) {
+      const idx = wires.findIndex(w => w.id === wireId);
+      if (idx !== -1) {
+        wires[idx].element.remove();
+        wires.splice(idx, 1);
+        checkCircuits();
+      }
+    }
+
+    clearBtn.addEventListener('click', () => {
+      wires.forEach(w => w.element.remove());
+      wires = [];
+      switches.sw1.closed = false;
+      switches.sw2.closed = false;
+      switches.sw1.box.classList.remove('closed', 'bypassed');
+      switches.sw2.box.classList.remove('closed', 'bypassed');
+
+      ['sw1', 'sw2', 'm1', 'm2'].forEach(k => {
+        const bubble = document.getElementById('bubble-' + k);
+        if (bubble) bubble.classList.remove('show');
+      });
+
+      if (selectedNode) {
+        document.getElementById(selectedNode).classList.remove('selected');
+        selectedNode = null;
+      }
+      tempLine.setAttribute('d', '');
+      checkCircuits();
+    });
+
+    /* ================= Circuit Solver & Simulation Engine ================= */
+    function checkCircuits() {
+      const graph = {};
+      nodes.forEach(n => graph[n.id] = []);
+
+      wires.forEach(w => {
+        graph[w.from].push(w.to);
+        graph[w.to].push(w.from);
+      });
+
+      ['sw1', 'sw2'].forEach(k => {
+        const sw = switches[k];
+        const isBypassed = wires.some(w => w.isSwitchBypass && w.parentA === k && w.parentB === k);
+        if (sw.closed || isBypassed) {
+          graph[sw.inNode].push(sw.outNode);
+          graph[sw.outNode].push(sw.inNode);
+        }
+      });
+
+      function getReachableNodes(startNode) {
+        const visited = new Set();
+        const queue = [startNode];
+        visited.add(startNode);
+
+        while (queue.length > 0) {
+          const curr = queue.shift();
+          for (const neighbor of graph[curr] || []) {
+            if (!visited.has(neighbor)) {
+              visited.add(neighbor);
+              queue.push(neighbor);
+            }
+          }
+        }
+        return visited;
+      }
+
+      const posReachable = getReachableNodes('bat_pos');
+      const negReachable = getReachableNodes('bat_neg');
+
+      // Battery Short Circuit Check
+      const isShortCircuited = posReachable.has('bat_neg');
+
+      if (isShortCircuited) {
+        batteryBody.classList.add('battery-burned');
+        startAlarmSound();
+      } else {
+        batteryBody.classList.remove('battery-burned');
+        stopAlarmSound();
+      }
+
+      // Switch Bypass Bubbles
+      ['sw1', 'sw2'].forEach(swKey => {
+        const swBubble = document.getElementById('bubble-' + swKey);
+        const isBypassed = wires.some(w => w.isSwitchBypass && w.parentA === swKey && w.parentB === swKey);
+        if (isBypassed) {
+          if (swBubble) swBubble.classList.add('show');
+          switches[swKey].box.classList.add('bypassed');
+        } else {
+          if (swBubble) swBubble.classList.remove('show');
+          switches[swKey].box.classList.remove('bypassed');
+        }
+      });
+
+      // Motor Direction & Running Evaluation
+      let m1Dir = 0;
+      let m2Dir = 0;
+
+      if (!isShortCircuited) {
+        if (posReachable.has('m1_pos') && negReachable.has('m1_neg')) {
+          m1Dir = 1;
+        } else if (posReachable.has('m1_neg') && negReachable.has('m1_pos')) {
+          m1Dir = -1;
+        }
+
+        if (posReachable.has('m2_pos') && negReachable.has('m2_neg')) {
+          m2Dir = 1;
+        } else if (posReachable.has('m2_neg') && negReachable.has('m2_pos')) {
+          m2Dir = -1;
+        }
+      }
+
+      // Motor Speech Bubbles
+      [['m1', m1Dir], ['m2', m2Dir]].forEach(([mKey, dir]) => {
+        const bubble = document.getElementById('bubble-' + mKey);
+        const isSelfConnected = wires.some(w => w.parentA === mKey && w.parentB === mKey);
+
+        if (isSelfConnected) {
+          bubble.textContent = "Where is the power? 🤔";
+          bubble.classList.add('show');
+        } else if (dir === -1) {
+          bubble.textContent = "I am in reverse direction! 🔄🙃";
+          bubble.classList.add('show');
+        } else {
+          bubble.classList.remove('show');
+        }
+      });
+
+      // Wheel animations
+      wheelLeft.classList.remove('spinning-forward', 'spinning-reverse');
+      if (m1Dir === 1) wheelLeft.classList.add('spinning-forward');
+      else if (m1Dir === -1) wheelLeft.classList.add('spinning-reverse');
+
+      wheelRight.classList.remove('spinning-forward', 'spinning-reverse');
+      if (m2Dir === 1) wheelRight.classList.add('spinning-forward');
+      else if (m2Dir === -1) wheelRight.classList.add('spinning-reverse');
+
+      // Chassis car directional movements
+      carChassis.classList.remove(
+        'moving-forward', 'moving-backward',
+        'turning-left', 'turning-right',
+        'spin-left', 'spin-right'
+      );
+
+      if (isShortCircuited) {
+        statusPanel.textContent = "WARNING: Short Circuit Detected! 🔥";
+        statusPanel.style.color = "#ff3333";
+      } else if (m1Dir === 1 && m2Dir === 1) {
+        carChassis.classList.add('moving-forward');
+        statusPanel.textContent = "Robot Status: Moving Straight Forward ⬆️";
+        statusPanel.style.color = "#06d6a0";
+      } else if (m1Dir === -1 && m2Dir === -1) {
+        carChassis.classList.add('moving-backward');
+        statusPanel.textContent = "Robot Status: Moving Backward in Reverse ⬇️";
+        statusPanel.style.color = "#ff9e00";
+      } else if (m1Dir === 1 && m2Dir === 0) {
+        carChassis.classList.add('turning-right');
+        statusPanel.textContent = "Left Motor Active: Turning Right ↪️";
+        statusPanel.style.color = "#ffd166";
+      } else if (m1Dir === -1 && m2Dir === 0) {
+        carChassis.classList.add('spin-left');
+        statusPanel.textContent = "Left Motor Reverse: Reversing Right ↩️";
+        statusPanel.style.color = "#ffd166";
+      } else if (m1Dir === 0 && m2Dir === 1) {
+        carChassis.classList.add('turning-left');
+        statusPanel.textContent = "Right Motor Active: Turning Left ↩️";
+        statusPanel.style.color = "#ffd166";
+      } else if (m1Dir === 0 && m2Dir === -1) {
+        carChassis.classList.add('spin-right');
+        statusPanel.textContent = "Right Motor Reverse: Reversing Left ↪️";
+        statusPanel.style.color = "#ffd166";
+      } else if (m1Dir === 1 && m2Dir === -1) {
+        carChassis.classList.add('spin-right');
+        statusPanel.textContent = "Differential Drive: Sharp Spin Turn Right 🔄⚡";
+        statusPanel.style.color = "#ffbe0b";
+      } else if (m1Dir === -1 && m2Dir === 1) {
+        carChassis.classList.add('spin-left');
+        statusPanel.textContent = "Differential Drive: Sharp Spin Turn Left 🔄⚡";
+        statusPanel.style.color = "#ffbe0b";
+      } else {
+        statusPanel.textContent = "Robot Status: Stopped 🛑";
+        statusPanel.style.color = "#a0a4b8";
+      }
+    }
+
+    window.addEventListener('resize', () => {
+      wires.forEach(w => {
+        w.element.setAttribute('d', generateGeometricPath(w.from, w.to));
+      });
+    });
+  </script>
+</body>
+</html>

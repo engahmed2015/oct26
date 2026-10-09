@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>روبوبلانيت - منصة الطلاب التعليمية</title>
+  
+  <!-- خط تجوال العربي -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --purple: #6a1b9a;
+      --purple-dark: #4a148c;
+      --orange: #f59e0b;
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --text-white: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Tajawal', sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-white);
+      line-height: 1.6;
+      padding: 15px 15px 120px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 680px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    /* شريط التنبيه العلوي وإرسال الرابط للواتساب */
+    .desktop-notice-bar {
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95));
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      border-right: 4px solid var(--orange);
+      border-radius: 16px;
+      padding: 14px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    .notice-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .notice-text {
+      font-size: 0.92rem;
+      color: #f1f5f9;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 500;
+    }
+
+    .notice-text b {
+      color: var(--orange);
+    }
+
+    .whatsapp-send-box {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+    }
+
+    #student-phone {
+      flex: 1;
+      background: #090d16;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 10px 14px;
+      color: #fff;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+      text-align: right;
+    }
+
+    #student-phone:focus {
+      border-color: var(--orange);
+    }
+
+    .btn-send-wa {
+      background: #25d366;
+      color: #fff;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 12px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-send-wa:hover {
+      background: #20ba5a;
+      transform: translateY(-1px);
+    }
+
+    @media (max-width: 480px) {
+      .whatsapp-send-box {
+        flex-direction: column;
+      }
+      .btn-send-wa {
+        justify-content: center;
+      }
+    }
+
+    /* كارت الترحيب والشعار */
+    .header-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 30px 20px;
+      text-align: center;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    }
+
+    .logo-svg {
+      width: 130px;
+      height: 130px;
+      margin: 0 auto 10px;
+      filter: drop-shadow(0 4px 12px rgba(106, 27, 154, 0.4));
+    }
+
+    .title {
+      font-size: 2.1rem;
+      font-weight: 900;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .slogan {
+      display: inline-block;
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--orange);
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 15px;
+    }
+
+    .desc {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-bottom: 12px;
+    }
+
+    .motto {
+      color: #38bdf8;
+      font-weight: 800;
+      font-size: 1.15rem;
+      border-top: 1px dashed var(--card-border);
+      padding-top: 14px;
+    }
+
+    /* قسم اختيار المرحلة */
+    .stages-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 24px 20px;
+      text-align: center;
+    }
+
+    .stages-card h3 {
+      font-size: 1.25rem;
+      margin-bottom: 6px;
+      color: #fff;
+    }
+
+    .stages-card p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 18px;
+    }
+
+    .stages-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .btn-stage {
+      background: #0f172a;
+      border: 2px solid var(--card-border);
+      color: #fff;
+      padding: 12px 5px;
+      border-radius: 14px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-stage:hover {
+      border-color: var(--orange);
+      transform: translateY(-2px);
+    }
+
+    .btn-stage.active {
+      background: var(--purple);
+      border-color: var(--orange);
+      box-shadow: 0 0 15px rgba(245, 158, 11, 0.35);
+    }
+
+    /* منطقة عرض المحتوى */
+    #content-area {
+      scroll-margin-top: 20px;
+    }
+
+    .stage-content-card {
+      background: var(--card-bg);
+      border: 2px solid var(--purple);
+      border-radius: 20px;
+      padding: 24px 18px;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .stage-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 15px;
+      margin-bottom: 20px;
+    }
+
+    .stage-header h3 {
+      color: var(--orange);
+      font-size: 1.3rem;
+    }
+
+    .section-notice {
+      border-radius: 14px;
+      padding: 12px 14px;
+      margin: 12px 0 6px;
+    }
+
+    .section-notice.orange {
+      background: rgba(245, 158, 11, 0.08);
+      border: 1px dashed var(--orange);
+    }
+
+    .section-notice.blue {
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px dashed #38bdf8;
+    }
+
+    .section-notice.green {
+      background: rgba(34, 197, 94, 0.08);
+      border: 1px dashed #22c55e;
+    }
+
+    .section-notice.purple {
+      background: rgba(168, 85, 247, 0.08);
+      border: 1px dashed #a855f7;
+    }
+
+    .section-notice h4 {
+      font-size: 0.95rem;
+      margin-bottom: 4px;
+    }
+
+    .section-notice p {
+      color: var(--text-muted);
+      font-size: 0.82rem;
+    }
+
+    .links-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .resource-link {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding: 14px 15px;
+      border-radius: 15px;
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      text-decoration: none;
+      color: #fff;
+      transition: all 0.2s ease;
+    }
+
+    .resource-link:hover {
+      border-color: var(--orange);
+      transform: translateX(-4px);
+    }
+
+    .resource-icon {
+      font-size: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 46px;
+      height: 46px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.05);
+      flex-shrink: 0;
+    }
+
+    .resource-info h4 {
+      font-size: 0.98rem;
+      color: #fff;
+      margin-bottom: 2px;
+    }
+
+    .resource-info p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* مربع نسخ الروابط */
+    .copy-box-container {
+      background: #090d16;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 12px;
+      margin-top: 6px;
+    }
+
+    .copy-box-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .copy-box-title {
+      font-size: 0.82rem;
+      color: #94a3b8;
+    }
+
+    .btn-copy {
+      background: #6a1b9a;
+      color: #fff;
+      border: none;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-copy:hover {
+      background: #8e24aa;
+    }
+
+    .copy-code-text {
+      font-family: monospace;
+      font-size: 0.76rem;
+      color: #38bdf8;
+      word-break: break-all;
+      direction: ltr;
+      text-align: left;
+      line-height: 1.4;
+      background: rgba(0,0,0,0.3);
+      padding: 8px;
+      border-radius: 6px;
+      user-select: all;
+    }
+
+    /* قسم محاكاة حرب أكتوبر */
+    .october-sim-card {
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      border: 2px solid #ef4444;
+      border-radius: 20px;
+      padding: 22px 20px;
+      text-align: center;
+      box-shadow: 0 8px 25px rgba(239, 68, 68, 0.2);
+    }
+
+    .october-sim-card h3 {
+      font-size: 1.25rem;
+      color: #f87171;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .october-sim-card p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 16px;
+    }
+
+    .btn-october-sim {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: linear-gradient(135deg, #dc2626, #991b1b);
+      color: #fff;
+      text-decoration: none;
+      padding: 12px 26px;
+      border-radius: 14px;
+      font-weight: 800;
+      font-size: 1rem;
+      box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);
+      transition: all 0.2s ease;
+    }
+
+    .btn-october-sim:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(220, 38, 38, 0.6);
+      background: linear-gradient(135deg, #ef4444, #b91c1c);
+    }
+
+    /* كارت التقييم والتعليقات */
+    .rating-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 24px 20px;
+      text-align: center;
+    }
+
+    .rating-card h3 {
+      font-size: 1.25rem;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .rating-card p {
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      margin-bottom: 14px;
+    }
+
+    .stars-container {
+      display: inline-flex;
+      flex-direction: row-reverse;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .star {
+      font-size: 2.2rem;
+      color: #475569;
+      cursor: pointer;
+      transition: color 0.2s, transform 0.2s;
+      user-select: none;
+    }
+
+    .star:hover,
+    .star:hover ~ .star,
+    .star.selected,
+    .star.selected ~ .star {
+      color: #fbbf24;
+      transform: scale(1.15);
+      text-shadow: 0 0 12px rgba(251, 191, 36, 0.5);
+    }
+
+    .feedback-textarea {
+      width: 100%;
+      min-height: 90px;
+      background: #090d16;
+      border: 1px solid #334155;
+      border-radius: 14px;
+      padding: 12px 14px;
+      color: #fff;
+      font-size: 0.9rem;
+      outline: none;
+      resize: vertical;
+      margin-bottom: 14px;
+      transition: border-color 0.2s;
+    }
+
+    .feedback-textarea:focus {
+      border-color: var(--orange);
+    }
+
+    .btn-submit-rating {
+      background: linear-gradient(135deg, var(--orange), #d97706);
+      color: #fff;
+      border: none;
+      padding: 12px 28px;
+      border-radius: 14px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+      transition: all 0.2s ease;
+    }
+
+    .btn-submit-rating:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(245, 158, 11, 0.45);
+    }
+
+    .btn-submit-rating:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* شريط الواتساب العائم للتواصل */
+    .whatsapp-bar {
+      position: fixed;
+      bottom: 15px;
+      left: 15px;
+      right: 15px;
+      max-width: 680px;
+      margin: 0 auto;
+      background: #25d366;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 13px 20px;
+      border-radius: 50px;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 1rem;
+      box-shadow: 0 8px 25px rgba(37, 211, 102, 0.4);
+      z-index: 100;
+      transition: transform 0.2s;
+    }
+
+    .whatsapp-bar:hover {
+      transform: translateY(-2px);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+
+    <!-- شريط التنبيه العلوي وإرسال الرابط للواتساب -->
+    <div class="desktop-notice-bar">
+      <div class="notice-top">
+        <div class="notice-text">
+          <span>💻</span>
+          <span><b>ملاحظة هامة:</b> يُفضل فتح هذه الصفحة من جهاز <b>كمبيوتر أو لابتوب</b> وليس من هاتف ذكي. أدخل رقم واتساب الخاص بك لإرسال الرابط إليه وفتحه من واتساب ويب أو التطبيق:</span>
+        </div>
+      </div>
+      <div class="whatsapp-send-box">
+        <input 
+          type="tel" 
+          id="student-phone" 
+          placeholder="أدخل رقم واتساب (مثال: 01012345678)" 
+          dir="ltr"
+        />
+        <button class="btn-send-wa" onclick="sendLinkToWhatsApp()">
+          🚀 إرسال لواتساب
+        </button>
+      </div>
+    </div>
+
+    <!-- كارت الشعار والترحيب -->
+    <header class="header-card">
+      <svg class="logo-svg" viewBox="0 0 200 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="100" cy="230" rx="35" ry="4" fill="#6a1b9a" opacity="0.6"/>
+        <circle cx="100" cy="18" r="6" stroke="#6a1b9a" stroke-width="4" fill="none"/>
+        <path d="M100 24 L100 36" stroke="#6a1b9a" stroke-width="4" stroke-linecap="round"/>
+        <path d="M 25 90 A 85 24 0 0 1 175 90" stroke="#f59e0b" stroke-width="9" stroke-linecap="round"/>
+        <circle cx="100" cy="85" r="50" fill="#6a1b9a"/>
+        <circle cx="80" cy="65" r="4.5" fill="#ffffff" opacity="0.9"/>
+        <path d="M 72 73 A 40 40 0 0 1 73 60" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+        <path d="M 25 90 A 85 24 0 0 0 175 90" stroke="#f59e0b" stroke-width="9" stroke-linecap="round"/>
+        <circle cx="165" cy="78" r="13" fill="#6a1b9a" stroke="#0f172a" stroke-width="2"/>
+        <circle cx="162" cy="74" r="2.2" fill="#ffffff"/>
+        <circle cx="167" cy="81" r="2.8" fill="#ffffff"/>
+        <circle cx="160" cy="83" r="1.5" fill="#ffffff"/>
+        <path d="M 85 102 Q 100 115 115 102" stroke="#ffffff" stroke-width="4" stroke-linecap="round" fill="none"/>
+        <path d="M 60 145 L 30 152 L 25 130" stroke="#6a1b9a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <circle cx="30" cy="152" r="6" stroke="#6a1b9a" stroke-width="3" fill="#0f172a"/>
+        <path d="M 17 122 A 10 10 0 0 0 33 122" stroke="#6a1b9a" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+        <path d="M 140 145 L 170 152 L 175 130" stroke="#6a1b9a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <circle cx="170" cy="152" r="6" stroke="#6a1b9a" stroke-width="3" fill="#0f172a"/>
+        <path d="M 167 122 A 10 10 0 0 0 183 122" stroke="#6a1b9a" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+        <path d="M 60 130 L 140 130 L 140 170 C 140 195, 60 195, 60 170 Z" fill="#6a1b9a"/>
+      </svg>
+
+      <h1 class="title">أهلاً بك في روبوبلانيت</h1>
+      <span class="slogan">RoboPlanet</span>
+      
+      <p class="desc">
+        طبق العلوم بشكل عملي — حول البرمجة لتطبيق ملموس — اكتسب مهارات في سن صغيرة<br>
+        شارك في مسابقات فعلية ومشاريع على أرض الواقع
+      </p>
+      
+      <div class="motto">نبني جيلاً يبني 🚀</div>
+    </header>
+
+    <!-- كارت اختيار المرحلة -->
+    <section class="stages-card">
+      <h3>محتوى شهر أكتوبر</h3>
+      <p>برجاء اختيار المرحلة لعرض الدروس والمشاريع المخصصة:</p>
+      
+      <div class="stages-grid">
+        <button class="btn-stage" onclick="renderPage1(this)">J 1</button>
+        <button class="btn-stage" onclick="renderPage2(this)">J 2</button>
+        <button class="btn-stage" onclick="renderPage3(this, 'J 3')">J 3</button>
+        <button class="btn-stage" onclick="renderPage4(this)">J 4</button>
+        <button class="btn-stage" onclick="renderPage3(this, 'J 5')">J 5</button>
+        <button class="btn-stage" onclick="renderPage3(this, 'J 6')">J 6</button>
+        <button class="btn-stage" onclick="renderPage3(this, 'M 1')">M 1</button>
+        <button class="btn-stage" onclick="renderPage5(this, 'M 2')">M 2</button>
+        <button class="btn-stage" onclick="renderPage5(this, 'M 3')">M 3</button>
+      </div>
+    </section>
+
+    <!-- منطقة عرض محتوى المرحلة -->
+    <div id="content-area"></div>
+
+    <!-- قسم الانتقال لمحاكاة حرب أكتوبر -->
+    <section class="october-sim-card">
+      <h3>
+        <span>🇪🇬</span>
+        <span>محاكاة حرب أكتوبر التفاعلية</span>
+        <span>🎖️</span>
+      </h3>
+      <p>عش لحظات وبطولات نصر أكتوبر المجيد عبر المحاكي التفاعلي الممتع:</p>
+      <a href="https://engahmed2015.github.io/6october/" target="_blank" class="btn-october-sim" onclick="playSound('stage')">
+        <span>🚀 الانتقال لمحاكاة حرب أكتوبر</span>
+      </a>
+    </section>
+
+    <!-- كارت التقييم والتعليقات المربوط بالداتا بيز -->
+    <section class="rating-card">
+      <h3>قيم تجربتك معنا ⭐</h3>
+      <p>رأيك وملاحظاتك تهمنا لتطوير تجربة التعلم لجميع الطلاب:</p>
+
+      <div class="stars-container" id="stars-group">
+        <span class="star" data-val="5" onclick="selectStar(5)">★</span>
+        <span class="star" data-val="4" onclick="selectStar(4)">★</span>
+        <span class="star" data-val="3" onclick="selectStar(3)">★</span>
+        <span class="star" data-val="2" onclick="selectStar(2)">★</span>
+        <span class="star" data-val="1" onclick="selectStar(1)">★</span>
+      </div>
+
+      <textarea 
+        id="feedback-text" 
+        class="feedback-textarea" 
+        placeholder="اكتب تعليقك أو أي اقتراح تود إضافته لمنهج روبوبلانيت..."
+      ></textarea>
+
+      <div>
+        <button class="btn-submit-rating" id="btn-rating-submit" onclick="submitRating()">
+          ⭐ إرسال التقييم
+        </button>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- زر واتساب للتواصل المباشر -->
+  <a href="https://wa.me/201501008077" target="_blank" class="whatsapp-bar" onclick="playSound('click')">
+    <span>💬 للتواصل واتس آب: 01501008077</span>
+  </a>
+
+  <!-- دوال بناء المحتوى، الاتصال بقاعدة البيانات، والمؤثرات الصوتية -->
+  <script>
+    // إعدادات Firebase Realtime Database
+    const DB_BASE_URL = "https://espforever-default-rtdb.firebaseio.com";
+    const DB_AUTH = "kKR31b65ApUG9pCqRwB4w8ousVEnmBzOB2vzHHZT";
+
+    let currentRatingValue = 5;
+
+    // نظام المؤثرات الصوتية الرقمية التفاعلية عبر Web Audio API
+    let audioCtx = null;
+    function playSound(type = 'click') {
+      try {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        const now = audioCtx.currentTime;
+
+        if (type === 'stage') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(520, now);
+          osc.frequency.exponentialRampToValueAtTime(880, now + 0.12);
+          gain.gain.setValueAtTime(0.18, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+          osc.start(now);
+          osc.stop(now + 0.12);
+        } else if (type === 'success') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(659.25, now);
+          osc.frequency.setValueAtTime(880, now + 0.08);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+          osc.start(now);
+          osc.stop(now + 0.2);
+        } else {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(700, now);
+          osc.frequency.exponentialRampToValueAtTime(450, now + 0.07);
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.07);
+          osc.start(now);
+          osc.stop(now + 0.07);
+        }
+      } catch (e) {}
+    }
+
+    // تحديد النجوم
+    function selectStar(val) {
+      currentRatingValue = val;
+      playSound('click');
+      const stars = document.querySelectorAll('.star');
+      stars.forEach(s => {
+        const starVal = parseInt(s.getAttribute('data-val'));
+        if (starVal <= val) {
+          s.classList.add('selected');
+        } else {
+          s.classList.remove('selected');
+        }
+      });
+    }
+
+    // تفعيل النجوم الـ 5 افتراضياً عند التحميل
+    window.addEventListener('DOMContentLoaded', () => {
+      selectStar(5);
+    });
+
+    // 1. إرسال رقم الواتساب إلى Firebase في كائن numbers ثم فتح المحادثة
+    function sendLinkToWhatsApp() {
+      playSound('success');
+      const input = document.getElementById('student-phone');
+      let phone = input.value.trim().replace(/\s+/g, '');
+
+      if (!phone) {
+        alert('من فضلك أدخل رقم الواتساب أولاً');
+        input.focus();
+        return;
+      }
+
+      const record = {
+        phoneNumber: phone,
+        timestamp: new Date().toISOString(),
+        device: navigator.userAgent
+      };
+
+      fetch(`${DB_BASE_URL}/numbers.json?auth=${DB_AUTH}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(record)
+      }).catch(err => console.log("Firebase sync error:", err));
+
+      let waPhone = phone;
+      if (waPhone.startsWith('01')) {
+        waPhone = '2' + waPhone;
+      } else if (waPhone.startsWith('+201')) {
+        waPhone = waPhone.replace('+', '');
+      }
+
+      const currentUrl = window.location.href;
+      const message = `مرحباً! 👋\nإليك رابط منصة روبوبلانيت لفتحه على الكمبيوتر أو اللابتوب:\n${currentUrl}\n\nنبني جيلاً يبني 🚀`;
+
+      const waUrl = `https://api.whatsapp.com/send?phone=${waPhone}&text=${encodeURIComponent(message)}`;
+      window.open(waUrl, '_blank');
+    }
+
+    // 2. إرسال التقييم والتعليق إلى Firebase في كائن feedback
+    function submitRating() {
+      const commentInput = document.getElementById('feedback-text');
+      const comment = commentInput.value.trim();
+      const submitBtn = document.getElementById('btn-rating-submit');
+
+      submitBtn.disabled = true;
+      submitBtn.innerText = "جاري الإرسال...";
+
+      const feedbackData = {
+        rating: currentRatingValue,
+        comment: comment || "بدون تعليق",
+        timestamp: new Date().toISOString()
+      };
+
+      fetch(`${DB_BASE_URL}/feedback.json?auth=${DB_AUTH}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(feedbackData)
+      })
+      .then(res => res.json())
+      .then(data => {
+        playSound('success');
+        submitBtn.innerText = "تم إرسال تقييمك بنجاح! شكراً لك ❤️";
+        submitBtn.style.background = "#22c55e";
+        commentInput.value = "";
+        setTimeout(() => {
+          submitBtn.disabled = false;
+          submitBtn.innerText = "⭐ إرسال التقييم";
+          submitBtn.style.background = "";
+        }, 4000);
+      })
+      .catch(err => {
+        submitBtn.disabled = false;
+        submitBtn.innerText = "⭐ إرسال التقييم";
+        alert("حدث خطأ أثناء إرسال التقييم، برجاء المحاولة مرة أخرى.");
+      });
+    }
+
+    function setActive(button) {
+      playSound('stage');
+      document.querySelectorAll('.btn-stage').forEach(b => b.classList.remove('active'));
+      if (button) button.classList.add('active');
+    }
+
+    function scrollToContent() {
+      const area = document.getElementById('content-area');
+      area.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function copyUrl(elementId, btn) {
+      playSound('success');
+      const text = document.getElementById(elementId).innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        const originalText = btn.innerText;
+        btn.innerText = 'تم النسخ! ✓';
+        btn.style.background = '#22c55e';
+        setTimeout(() => {
+          btn.innerText = originalText;
+          btn.style.background = '#6a1b9a';
+        }, 2000);
+      });
+    }
+
+    // --- صفحة 1: مخصصة لـ J 1 ---
+    function renderPage1(btn) {
+      setActive(btn);
+      document.getElementById('content-area').innerHTML = `
+        <div class="stage-content-card">
+          <div class="stage-header">
+            <div>
+              <h3>محتوى مرحلة J 1</h3>
+              <p style="color: var(--orange); font-weight: bold; font-size: 0.9rem;">المغناطيس ومفهوم البرمجة 🧲</p>
+            </div>
+            <span style="color: var(--text-muted); font-size: 0.9rem;">شهر أكتوبر</span>
+          </div>
+
+          <div class="links-list">
+            <a href="https://youtu.be/3bQivEDfvAw" target="_blank" class="resource-link" onclick="playSound('click')">
+              <div class="resource-icon">🧲</div>
+              <div class="resource-info">
+                <h4>فيديو شرح المغناطيس</h4>
+                <p>تعرف على القوى والأقطاب المغناطيسية والتجاذب والتنافر</p>
+              </div>
+            </a>
+
+            <a href="https://youtu.be/vCndD-KJ8bg" target="_blank" class="resource-link" onclick="playSound('click')">
+              <div class="resource-icon">🛠️</div>
+              <div class="resource-info">
+                <h4>فيديو تركيب مشروع المتاهة</h4>
+                <p>خطوات تجميع وتركيب المتاهة المغناطيسية الممتعة</p>
+              </div>
+            </a>
+
+            <a href="kids%20code.html" target="_blank" class="resource-link" style="border-color: #38bdf8;" onclick="playSound('click')">
+              <div class="resource-icon">🎮</div>
+              <div class="resource-info">
+                <h4 style="color: #38bdf8;">لعبة مفهوم البرمجة</h4>
+                <p>افتح لعبة التحدي التفاعلية (kids code.html) وابدأ البرمجة</p>
+              </div>
+            </a>
+          </div>
+        </div>
+      `;
+      scrollToContent();
+    }
+
+    // --- صفحة 2: مخصصة لـ J 2 ---
+    function renderPage2(btn) {
+      setActive(btn);
+      document.getElementById('content-area').innerHTML = `
+        <div class="stage-content-card">
+          <div class="stage-header">
+            <div>
+              <h3>محتوى مرحلة J 2</h3>
+              <p style="color: var(--orange); font-weight: bold; font-size: 0.9rem;">مشروع المنجنيق ومفهوم طاقة الحركة 🏹</p>
+            </div>
+            <span style="color: var(--text-muted); font-size: 0.9rem;">شهر أكتوبر</span>
+          </div>
+
+          <div class="links-list">
+            <a href="https://youtu.be/FDkLDlV35xg" target="_blank" class="resource-link" onclick="playSound('click')">
+              <div class="resource-icon">🎥</div>
+              <div class="resource-info">
+                <h4>فيديو شرح مشروع المنجنيق</h4>
+                <p>تعرف على طاقة الوضع وطاقة الحركة وخطوات عمل المنجنيق</p>
+              </div>
+            </a>
+
+            <a href="free%20sim.html" target="_blank" class="resource-link" style="border-color: #38bdf8;" onclick="playSound('click')">
+              <div class="resource-icon">🧪</div>
+              <div class="resource-info">
+                <h4 style="color: #38bdf8;">صفحة التجارب الحرة (Free Sim)</h4>
+                <p>محاكي تفاعلي لإطلاق المقذوفات واختبار الزوايا وقوة الشد بحرية</p>
+              </div>
+            </a>
+
+            <a href="targets.html" target="_blank" class="resource-link" style="border-color: #4ade80;" onclick="playSound('click')">
+              <div class="resource-icon">🎯</div>
+              <div class="resource-info">
+                <h4 style="color: #4ade80;">صفحة التجارب مع الأهداف (Targets)</h4>
+                <p>تطبيق عملي لإصابة الأهداف وتعديل مسار المقذوف</p>
+              </div>
+            </a>
+
+            <a href="tut.html" target="_blank" class="resource-link" style="border-color: #fbbf24;" onclick="playSound('click')">
+              <div class="resource-icon">📖</div>
+              <div class="resource-info">
+                <h4 style="color: #fbbf24;">صفحة التعليم التفاعلي (Tutorial)</h4>
+                <p>دليل إرشادي خطوة بخطوة لفهم حركة المقذوفات وقوانين الفيزياء</p>
+              </div>
+            </a>
+
+            <a href="target%20with%20enemy.html" target="_blank" class="resource-link" style="border-color: #f43f5e;" onclick="playSound('click')">
+              <div class="resource-icon">⚔️</div>
+              <div class="resource-info">
+                <h4 style="color: #f43f5e;">صفحة التحدي (Target with Enemy)</h4>
+                <p>تحدي الأبطال لإصابة الأهداف وتفادي الدفاعات والعقبات</p>
+              </div>
+            </a>
+          </div>
+        </div>
+      `;
+      scrollToContent();
+    }
+
+    // --- صفحة 3: مخصصة لـ J3, J5, J6, M1 ---
+    function renderPage3(btn, gradeName) {
+      setActive(btn);
+      document.getElementById('content-area').innerHTML = `
+        <div class="stage-content-card">
+          <div class="stage-header">
+            <div>
+              <h3>محتوى مرحلة ${gradeName}</h3>
+              <p style="color: var(--orange); font-weight: bold; font-size: 0.9rem;">الدوائر الكهربية وبناء روبوت السيارة 🚗⚡</p>
+            </div>
+            <span style="color: var(--text-muted); font-size: 0.9rem;">شهر أكتوبر</span>
+          </div>
+
+          <div class="links-list">
+            <a href="https://youtu.be/wPIvuoYmOHw" target="_blank" class="resource-link" onclick="playSound('click')">
+              <div class="resource-icon">⚡</div>
+              <div class="resource-info">
+                <h4>تعلم أساسيات الدوائر الكهربية</h4>
+                <p>مفهوم التيار الكهربي، المسار المغلق، والقطبية</p>
+              </div>
+            </a>
+
+            <a href="https://youtu.be/rcJJHwIj8K4" target="_blank" class="resource-link" onclick="playSound('click')">
+              <div class="resource-icon">🚗</div>
+              <div class="resource-info">
+                <h4>تعلم تركيب شاسيه روبوت السيارة</h4>
+                <p>خطوات التجميع الميكانيكي وتثبيت المحركات والعجلات</p>
+              </div>
+            </a>
+
+            <a href="https://youtu.be/iH7OI8e2Chw" target="_blank" class="resource-link" onclick="playSound('click')">
+              <div class="resource-icon">🕹️</div>
+              <div class="resource-info">
+                <h4>توصيل المواتير والتحكم في حركة السيارة</h4>
+                <p>توصيل المفاتيح والتحكم بالحركة للأمام والخلف والدوران</p>
+              </div>
+            </a>
+
+            <a href="car%20tut.html" target="_blank" class="resource-link" style="border-color: #38bdf8;" onclick="playSound('click')">
+              <div class="resource-icon">🔌</div>
+              <div class="resource-info">
+                <h4 style="color: #38bdf8;">محاكي التوصيل خطوة بخطوة (Car Tut)</h4>
+                <p>تدريب تفاعلي إرشادي لتوصيل أجزاء الدائرة خطوة بخطوة</p>
+              </div>
+            </a>
+
+            <a href="car%20sim.html" target="_blank" class="resource-link" style="border-color: #4ade80;" onclick="playSound('click')">
+              <div class="resource-icon">💡</div>
+              <div class="resource-info">
+                <h4 style="color: #4ade80;">صفحة التجارب الحرة للتوصيل (Car Sim)</h4>
+                <p>مختبر افتراضي لاختبار وتجربة دوائر التوصيل الكهربي بحرية</p>
+              </div>
+            </a>
+          </div>
+        </div>
+      `;
+      scrollToContent();
+    }
+
+    // --- صفحة 4: مخصصة لـ J 4 ---
+    function renderPage4(btn) {
+      setActive(btn);
+      document.getElementById('content-area').innerHTML = `
+        <div class="stage-content-card">
+          <div class="stage-header">
+            <div>
+              <h3>محتوى مرحلة J 4</h3>
+              <p style="color: var(--orange); font-weight: bold; font-size: 0.9rem;">بداية التعامل مع الأردوينو وإشارة المرور 🚦🤖</p>
+            </div>
+            <span style="color: var(--text-muted); font-size: 0.9rem;">شهر أكتوبر</span>
+          </div>
+
+          <div class="links-list">
+            <!-- 1. منصة Tinkercad -->
+            <div class="section-notice orange">
+              <h4 style="color: var(--orange);">💻 أولاً: تسجيل الدخول على منصة Tinkercad</h4>
+              <p>اختر إحدى الطريقتين للتسجيل وبدء المحاكاة:</p>
+            </div>
+
+            <a href="https://youtu.be/B2QN_agujLI" target="_blank" class="resource-link" onclick="playSound('click')">
+              <div class="resource-icon">📧</div>
+              <div class="resource-info">
+                <h4>فيديو: التسجيل بالإيميل الشخصي</h4>
+                <p>شرح خطوات إنشاء حساب والدخول على موقع Tinkercad بإيميلك</p>
+              </div>
+            </a>
+
+            <a href="https://www.tinkercad.com/joinclass/P8963ATBY" target="_blank" class="resource-link" style="border-color: #38bdf8;" onclick="playSound('click')">
+              <div class="resource-icon">🏫</div>
+              <div class="resource-info">
+                <h4 style="color: #38bdf8;">رابط الدخول المباشر لفصل روبوبلانيت</h4>
+                <p>ادخل باسم مستخدم جاهز: robo1 أو robo2 حتى robo10</p>
+              </div>
+            </a>
+
+            <a href="https://youtu.be/TivYLEmZE68" target="_blank" class="resource-link" onclick="playSound('click')">
+              <div class="resource-icon">🎥</div>
+              <div class="resource-info">
+                <h4>فيديو: كيفية تسجيل الدخول بحساب الفصل الجاهز</h4>
+                <p>شاهد خطوات الانضمام للفصل باستخدام الاسم المستعار المخصص لك</p>
+              </div>
+            </a>
+
+            <!-- 2. تحميل برنامج Arduino IDE -->
+            <div class="section-notice purple">
+              <h4 style="color: #c084fc;">🛠️ ثانياً: تحميل برنامج Arduino IDE للكمبيوتر</h4>
+              <p>حمل البرنامج على جهازك لبرمجة الأردوينو ورفع الأكواد:</p>
+            </div>
+
+            <a href="https://drive.google.com/file/d/19oR4TFA3BYUTjOvdNQCD9-W_9Z3HEikY/view?usp=drive_link" target="_blank" class="resource-link" style="border-color: #c084fc;" onclick="playSound('click')">
+              <div class="resource-icon">💾</div>
+              <div class="resource-info">
+                <h4 style="color: #c084fc;">تحميل برنامج Arduino IDE (نسخة مستقرة)</h4>
+                <p>رابط مباشر وسريع من Google Drive لتثبيت البرنامج على الكمبيوتر</p>
+              </div>
+            </a>
+
+            <!-- 3. دروس وشروحات الأردوينو -->
+            <div class="section-notice blue">
+              <h4 style="color: #38bdf8;">📚 ثالثاً: الدروس والشرح العملي للأردوينو</h4>
+              <p>شاهد الدروس وطبق المحاكاة خطوة بخطوة:</p>
+            </div>
+
+            <a href="https://youtu.be/lTaY8c6_gFI" target="_blank" class="resource-link" onclick="playSound('click')">
+              <div class="resource-icon">💡</div>
+              <div class="resource-info">
+                <h4>شرح الفصل الأول: بداية التعامل مع الأردوينو</h4>
+                <p>التعرف على لوحة Arduino Uno، المنافذ الرقمية، والبرمجة الأولى</p>
+              </div>
+            </a>
+
+            <a href="https://youtu.be/XS-o9vgbGCU" target="_blank" class="resource-link" style="border-color: #4ade80;" onclick="playSound('click')">
+              <div class="resource-icon">🚦</div>
+              <div class="resource-info">
+                <h4 style="color: #4ade80;">فيديو تطبيق مشروع إشارة المرور (Traffic Light)</h4>
+                <p>توصيل ليدات الإشارة وبرمجة التوقيت والتتابع الزمني للألوان</p>
+              </div>
+            </a>
+          </div>
+        </div>
+      `;
+      scrollToContent();
+    }
+
+    // --- صفحة 5: مخصصة لـ M 2 و M 3 ---
+    function renderPage5(btn, gradeName) {
+      setActive(btn);
+      document.getElementById('content-area').innerHTML = `
+        <div class="stage-content-card">
+          <div class="stage-header">
+            <div>
+              <h3>محتوى مرحلة ${gradeName}</h3>
+              <p style="color: var(--orange); font-weight: bold; font-size: 0.9rem;">الأردوينو والمتحكم المتقدم ESP 📡🤖</p>
+            </div>
+            <span style="color: var(--text-muted); font-size: 0.9rem;">شهر أكتوبر</span>
+          </div>
+
+          <div class="links-list">
+            <!-- 1. منصة Tinkercad -->
+            <div class="section-notice orange">
+              <h4 style="color: var(--orange);">💻 أولاً: تسجيل الدخول على منصة Tinkercad</h4>
+              <p>اختر إحدى الطريقتين للتسجيل وبدء المحاكاة:</p>
+            </div>
+
+            <a href="https://youtu.be/B2QN_agujLI" target="_blank" class="resource-link" onclick="playSound('click')">
+              <div class="resource-icon">📧</div>
+              <div class="resource-info">
+                <h4>فيديو: التسجيل بالإيميل الشخصي</h4>
+                <p>شرح خطوات إنشاء حساب والدخول على موقع Tinkercad بإيميلك</p>
+              </div>
+            </a>
+
+            <a href="https://www.tinkercad.com/joinclass/P8963ATBY" target="_blank" class="resource-link" style="border-color: #38bdf8;" onclick="playSound('click')">
+              <div class="resource-icon">🏫</div>
+              <div class="resource-info">
+                <h4 style="color: #38bdf8;">رابط الدخول المباشر لفصل روبوبلانيت</h4>
+                <p>ادخل باسم مستخدم جاهز: robo1 أو robo2 حتى robo10</p>
+              </div>
+            </a>
+
+            <a href="https://youtu.be/TivYLEmZE68" target="_blank" class="resource-link" onclick="playSound('click')">
+              <div class="resource-icon">🎥</div>
+              <div class="resource-info">
+                <h4>فيديو: كيفية تسجيل الدخول بحساب الفصل الجاهز</h4>
+                <p>شاهد خطوات الانضمام للفصل باستخدام الاسم المستعار المخصص لك</p>
+              </div>
+            </a>
+
+            <!-- 2. تحميل البرامج والتعريفات -->
+            <div class="section-notice purple">
+              <h4 style="color: #c084fc;">🛠️ ثانياً: تحميل البرامج وتعريف الـ USB</h4>
+              <p>حمل البرامج والتعريفات المطلوبة لتشغيل اللوحة والاتصال بالكمبيوتر:</p>
+            </div>
+
+            <a href="https://drive.google.com/file/d/19oR4TFA3BYUTjOvdNQCD9-W_9Z3HEikY/view?usp=drive_link" target="_blank" class="resource-link" style="border-color: #c084fc;" onclick="playSound('click')">
+              <div class="resource-icon">💾</div>
+              <div class="resource-info">
+                <h4 style="color: #c084fc;">تحميل برنامج Arduino IDE (نسخة مستقرة)</h4>
+                <p>رابط مباشر من Google Drive لتثبيت البرنامج الأساسي للبرمجة</p>
+              </div>
+            </a>
+
+            <a href="https://drive.google.com/file/d/1MX8eyG4Rcc721zgdo9fV7dI8KJN_sWLq/view?usp=drive_link" target="_blank" class="resource-link" style="border-color: #f59e0b;" onclick="playSound('click')">
+              <div class="resource-icon">🔌</div>
+              <div class="resource-info">
+                <h4 style="color: #f59e0b;">تحميل تعريف كابل الـ USB (CH340 Driver)</h4>
+                <p>ملف التعريف لظهور لوحة الأردوينو و ESP في منافذ الـ Port</p>
+              </div>
+            </a>
+
+            <!-- 3. روابط مكتبات الـ ESP -->
+            <div class="copy-box-container">
+              <div class="copy-box-header">
+                <span class="copy-box-title">📋 رابط تثبيت مكتبات ESP8266 و ESP32 في الـ IDE:</span>
+                <button class="btn-copy" onclick="copyUrl('esp-urls', this)">نسخ الرابط</button>
+              </div>
+              <div id="esp-urls" class="copy-code-text">https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json,http://arduino.esp8266.com/stable/package_esp8266com_index.json</div>
+              <p style="color: #94a3b8; font-size: 0.75rem; margin-top: 6px;">
+                💡 <b>طريقة الإضافة:</b> انسخ الرابط أعلاه، ثم من برنامج Arduino IDE اذهب إلى: <br>
+                <code style="color: #f59e0b; direction: ltr; display: inline-block;">File > Preferences</code> ثم الصقه في خانة <code style="color: #f59e0b; direction: ltr; display: inline-block;">Additional boards manager URLs</code> واضغط OK.
+              </p>
+            </div>
+
+            <!-- 4. دروس وشروحات الأردوينو -->
+            <div class="section-notice blue">
+              <h4 style="color: #38bdf8;">📚 رابعاً: الدروس والشرح العملي للأردوينو</h4>
+              <p>شاهد الدروس وطبق المحاكاة خطوة بخطوة:</p>
+            </div>
+
+            <a href="https://youtu.be/lTaY8c6_gFI" target="_blank" class="resource-link" onclick="playSound('click')">
+              <div class="resource-icon">💡</div>
+              <div class="resource-info">
+                <h4>شرح الفصل الأول: بداية التعامل مع الأردوينو</h4>
+                <p>التعرف على لوحة Arduino Uno، المنافذ الرقمية، والبرمجة الأولى</p>
+              </div>
+            </a>
+
+            <a href="https://youtu.be/XS-o9vgbGCU" target="_blank" class="resource-link" style="border-color: #4ade80;" onclick="playSound('click')">
+              <div class="resource-icon">🚦</div>
+              <div class="resource-info">
+                <h4 style="color: #4ade80;">فيديو تطبيق مشروع إشارة المرور (Traffic Light)</h4>
+                <p>توصيل ليدات الإشارة وبرمجة التوقيت والتتابع الزمني للألوان</p>
+              </div>
+            </a>
+
+            <!-- 5. تشغيل مشروعات الأردوينو باستخدام الـ ESP -->
+            <div class="section-notice green">
+              <h4 style="color: #22c55e;">📡 خامساً: تشغيل مشاريع الأردوينو بمتحكم الـ ESP</h4>
+              <p>دليل التشغيل والشرح المتقدم للمتحكم اللاسلكي:</p>
+            </div>
+
+            <a href="esp1.pdf" target="_blank" class="resource-link" style="border-color: #f43f5e;" onclick="playSound('click')">
+              <div class="resource-icon">📄</div>
+              <div class="resource-info">
+                <h4 style="color: #f43f5e;">ملف الشرح والتطبيق: esp1.pdf</h4>
+                <p>كتيب خطوات تحويل وتشغيل نفس مشروعات الأردوينو باستخدام الـ ESP</p>
+              </div>
+            </a>
+
+            <a href="https://www.youtube.com/watch?v=hnMDm-_9kiE" target="_blank" class="resource-link" onclick="playSound('click')">
+              <div class="resource-icon">📶</div>
+              <div class="resource-info">
+                <h4>فيديو: شرح تشغيل الـ ESP لأول مرة</h4>
+                <p>تعريف وتوصيل وبرمجة لوحة ESP وتشغيل المشروعات عليها عملياً</p>
+              </div>
+            </a>
+          </div>
+        </div>
+      `;
+      scrollToContent();
+    }
+  </script>
+</body>
+</html>

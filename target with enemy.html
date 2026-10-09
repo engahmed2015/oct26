@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <title>Catapult vs Shadow Army - Fast Siege</title>
+  <style>
+    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { margin: 0; padding: 12px; background: #111315; color: #fff; display: flex; flex-direction: column; align-items: center; }
+    header { width: 100%; max-width: 1520px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    h1 { margin: 0; font-size: 20px; color: #ffca28; }
+    .main-container { display: flex; flex-wrap: wrap; gap: 15px; width: 100%; max-width: 1520px; }
+    .canvas-container { flex: 1; min-width: 950px; background: #87CEEB; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 18px rgba(0,0,0,0.7); position: relative; }
+    canvas { display: block; width: 100%; height: 560px; }
+    .controls-panel { width: 320px; background: #1c1f24; padding: 16px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+    .control-group { margin-bottom: 12px; }
+    .control-group label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; color: #cfd8dc; }
+    .control-group label span { font-weight: bold; color: #ffca28; }
+    input[type=range] { width: 100%; accent-color: #ff9800; cursor: pointer; }
+    input[type=range]:disabled { opacity: 0.3; cursor: not-allowed; }
+    .btn-group { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+    .btn-row { display: flex; gap: 8px; }
+    button { flex: 1; padding: 11px; border: none; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; transition: 0.2s; }
+    .btn-fire { background: #e53935; color: white; }
+    .btn-fire:hover { background: #d32f2f; }
+    .btn-fire:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-reset { background: #455a64; color: white; }
+    .btn-reset:hover { background: #37474f; }
+    .btn-restart { background: #ff9800; color: #111; }
+    .btn-restart:hover { background: #fb8c00; }
+    .status-banner { margin-top: 10px; padding: 10px; background: #262c33; border-radius: 6px; font-size: 13px; text-align: center; color: #81c784; font-weight: bold; border-left: 4px solid #81c784; transition: 0.3s; }
+    .stats-box { margin-top: 12px; padding: 10px; background: #14171a; border-radius: 8px; font-size: 12px; line-height: 1.6; border-left: 4px solid #ffca28; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>⚔️ Catapult vs Shadow Army: Fast Siege</h1>
+    <span style="font-size: 13px; color: #bbb;">Rebuild: 9s base | Hit 2+ castles to extend timer to 18s!</span>
+  </header>
+
+  <div class="main-container">
+    <div class="canvas-container">
+      <canvas id="simCanvas" width="1380" height="560"></canvas>
+    </div>
+
+    <div class="controls-panel">
+      <div class="control-group">
+        <label>Pullback Angle: <span><span id="valPull">45</span>°</span></label>
+        <input type="range" id="paramPull" min="15" max="75" value="45">
+      </div>
+
+      <div class="control-group">
+        <label>Arm Length: <span><span id="valArm">120</span> cm</span></label>
+        <input type="range" id="paramArm" min="80" max="150" step="10" value="120">
+      </div>
+
+      <div class="control-group">
+        <label>Band Tension: <span><span id="valTension">3</span></span></label>
+        <input type="range" id="paramTension" min="1" max="5" step="1" value="3">
+      </div>
+
+      <div class="control-group">
+        <label>Pivot Height: <span><span id="valPivotH">90</span> cm</span></label>
+        <input type="range" id="paramPivotH" min="60" max="130" step="10" value="90">
+      </div>
+
+      <div class="control-group">
+        <label>Platform Height: <span><span id="valPlatform">30</span> cm</span></label>
+        <input type="range" id="paramPlatform" min="0" max="150" step="10" value="30">
+      </div>
+
+      <div class="btn-group">
+        <button class="btn-fire" id="fireBtn">Fire Catapult 🚀</button>
+        <div class="btn-row">
+          <button class="btn-reset" id="resetBtn">Manual Reload</button>
+          <button class="btn-restart" id="restartGameBtn">Restart War 🔄</button>
+        </div>
+      </div>
+
+      <div class="status-banner" id="gameStatus">🛡️ Defense Active: Rapid construction underway!</div>
+
+      <div class="stats-box">
+        <strong>Battlefield Intel:</strong><br>
+        Launch Speed: <span id="statV0">0.00</span> m/s<br>
+        Shot Range: <span id="statRange">0.00</span> m<br>
+        Standing Castles: <span id="statCastles">5 / 5</span><br>
+        Army Position: <span id="statArmyState">Advancing</span> (<span id="statArmyDist">100</span> m)
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const pPull = document.getElementById('paramPull');
+    const pArm = document.getElementById('paramArm');
+    const pTension = document.getElementById('paramTension');
+    const pPivotH = document.getElementById('paramPivotH');
+    const pPlatform = document.getElementById('paramPlatform');
+
+    const vPull = document.getElementById('valPull');
+    const vArm = document.getElementById('valArm');
+    const vTension = document.getElementById('valTension');
+    const vPivotH = document.getElementById('valPivotH');
+    const vPlatform = document.getElementById('valPlatform');
+
+    const statV0 = document.getElementById('statV0');
+    const statRange = document.getElementById('statRange');
+    const statCastles = document.getElementById('statCastles');
+    const statArmyDist = document.getElementById('statArmyDist');
+    const statArmyState = document.getElementById('statArmyState');
+    const gameStatus = document.getElementById('gameStatus');
+    const fireBtn = document.getElementById('fireBtn');
+
+    // 9s base, 18s on 2+ castles
+    const BASE_REBUILD_TIME = 9.0;
+    const COMBO_REBUILD_TIME = 18.0;
+
+    let audioCtx = null;
+    function initAudio() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    function soundLaunch() {
+      initAudio();
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(160, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(35, audioCtx.currentTime + 0.18);
+      g.gain.setValueAtTime(0.7, audioCtx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.18);
+      osc.connect(g); g.connect(audioCtx.destination);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.18);
+    }
+
+    function soundHit() {
+      initAudio();
+      const bSize = audioCtx.sampleRate * 0.45;
+      const b = audioCtx.createBuffer(1, bSize, audioCtx.sampleRate);
+      const d = b.getChannelData(0);
+      for (let i = 0; i < bSize; i++) d[i] = Math.random() * 2 - 1;
+      const src = audioCtx.createBufferSource();
+      src.buffer = b;
+      const flt = audioCtx.createBiquadFilter();
+      flt.type = 'lowpass';
+      flt.frequency.setValueAtTime(700, audioCtx.currentTime);
+      flt.frequency.linearRampToValueAtTime(80, audioCtx.currentTime + 0.45);
+      const g = audioCtx.createGain();
+      g.gain.setValueAtTime(1.0, audioCtx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.45);
+      src.connect(flt); flt.connect(g); g.connect(audioCtx.destination);
+      src.start();
+    }
+
+    function soundCombo() {
+      initAudio();
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+      osc.frequency.setValueAtTime(660, audioCtx.currentTime + 0.12);
+      osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.24);
+      g.gain.setValueAtTime(0.6, audioCtx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.45);
+      osc.connect(g); g.connect(audioCtx.destination);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.45);
+    }
+
+    function soundRetreat() {
+      initAudio();
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(340, audioCtx.currentTime);
+      osc.frequency.linearRampToValueAtTime(160, audioCtx.currentTime + 0.4);
+      g.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+      osc.connect(g); g.connect(audioCtx.destination);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+    }
+
+    function soundDefeat() {
+      initAudio();
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(110, audioCtx.currentTime);
+      osc.frequency.linearRampToValueAtTime(30, audioCtx.currentTime + 0.9);
+      g.gain.setValueAtTime(0.9, audioCtx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.9);
+      osc.connect(g); g.connect(audioCtx.destination);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.9);
+    }
+
+    const PIXEL_SCALE = 0.72;
+    const GROUND_Y = 500;
+    const BASE_X = 85;
+    const GRAVITY = 9.81 * 100;
+
+    let gameState = 'playing';
+    let catapultState = 'ready';
+    let currentArmAngle = 45;
+    const releaseAngle = -20;
+    let angularVel = 0;
+    let autoReloadTimeout = null;
+
+    let ball = { x: 0, y: 0, vx: 0, vy: 0, radius: 8 };
+    let trajectory = [];
+    let particles = [];
+    let hitsInCurrentShot = 0;
+
+    function getElevation(x) {
+      if (x < 780) return GROUND_Y;
+      if (x < 1000) {
+        const t = (x - 780) / (1000 - 780);
+        return GROUND_Y - 50 * (0.5 - 0.5 * Math.cos(t * Math.PI));
+      }
+      if (x < 1180) {
+        const t = (x - 1000) / (1180 - 1000);
+        return GROUND_Y - 50 - 70 * (0.5 - 0.5 * Math.cos(t * Math.PI));
+      }
+      const t = Math.min(1, (x - 1180) / 140);
+      return GROUND_Y - 120 - 40 * t;
+    }
+
+    let castles = [];
+    function initCastles() {
+      castles = [
+        { id: 1, baseX: 420, x: 420, w: 46, h: 50, hit: false, rebuildTimer: 0, maxTimer: BASE_REBUILD_TIME },
+        { id: 2, baseX: 680, x: 680, w: 52, h: 60, hit: false, rebuildTimer: 0, maxTimer: BASE_REBUILD_TIME },
+        { id: 3, baseX: 910, x: 910, w: 54, h: 60, hit: false, rebuildTimer: 0, maxTimer: BASE_REBUILD_TIME },
+        { id: 4, baseX: 1110, x: 1110, w: 58, h: 65, hit: false, rebuildTimer: 0, maxTimer: BASE_REBUILD_TIME },
+        { id: 5, baseX: 1260, x: 1260, w: 54, h: 65, hit: false, rebuildTimer: 0, maxTimer: BASE_REBUILD_TIME }
+      ];
+      castles.forEach(c => c.y = getElevation(c.x + c.w / 2) - c.h);
+    }
+
+    let army = {
+      x: 1260,
+      marchSpeed: 14,
+      retreatSpeed: 38,
+      state: 'garrisoned',
+      currentCastleIdx: 4,
+      lastExitedCastleIdx: null,
+      garrisonTimer: 6.0,
+      retreatTargetX: 1260
+    };
+
+    function updateLabels() {
+      vPull.innerText = pPull.value;
+      vArm.innerText = pArm.value;
+      vTension.innerText = pTension.value;
+      vPivotH.innerText = pPivotH.value;
+      vPlatform.innerText = pPlatform.value;
+    }
+
+    function getPivotCoords() {
+      const platH = parseFloat(pPlatform.value);
+      const pivH = parseFloat(pPivotH.value);
+      return {
+        x: BASE_X,
+        y: GROUND_Y - (platH + pivH) * PIXEL_SCALE,
+        platH_px: platH * PIXEL_SCALE
+      };
+    }
+
+    function getCupCoords(pivot, armLenCm, thetaDeg) {
+      const thetaRad = thetaDeg * (Math.PI / 180);
+      const armPx = armLenCm * PIXEL_SCALE;
+      return {
+        x: pivot.x - armPx * Math.sin(thetaRad),
+        y: pivot.y - armPx * Math.cos(thetaRad)
+      };
+    }
+
+    function resetSimulation() {
+      if (gameState !== 'playing') return;
+      if (autoReloadTimeout) clearTimeout(autoReloadTimeout);
+
+      catapultState = 'ready';
+      currentArmAngle = parseFloat(pPull.value);
+      trajectory = [];
+      fireBtn.disabled = false;
+
+      const pivot = getPivotCoords();
+      const cup = getCupCoords(pivot, parseFloat(pArm.value), currentArmAngle);
+      ball.x = cup.x;
+      ball.y = cup.y;
+      draw();
+    }
+
+    function scheduleAutoReload() {
+      if (autoReloadTimeout) clearTimeout(autoReloadTimeout);
+      autoReloadTimeout = setTimeout(() => {
+        if (gameState === 'playing') {
+          resetSimulation();
+        }
+      }, 800);
+    }
+
+    function restartWar() {
+      if (autoReloadTimeout) clearTimeout(autoReloadTimeout);
+      gameState = 'playing';
+      initCastles();
+      army.x = castles[4].x + castles[4].w / 2;
+      army.currentCastleIdx = 4;
+      army.lastExitedCastleIdx = null;
+      army.state = 'garrisoned';
+      army.garrisonTimer = 5.0;
+      gameStatus.innerText = "🛡️ Defense Active: Rapid construction underway!";
+      gameStatus.style.color = "#81c784";
+      gameStatus.style.borderLeftColor = "#81c784";
+      fireBtn.disabled = false;
+      statV0.innerText = "0.00";
+      statRange.innerText = "0.00";
+      resetSimulation();
+    }
+
+    function fire() {
+      if (catapultState !== 'ready' || gameState !== 'playing') return;
+      catapultState = 'firing';
+      fireBtn.disabled = true;
+      hitsInCurrentShot = 0;
+      soundLaunch();
+
+      const k = parseFloat(pTension.value) * 85;
+      const pullAngle = parseFloat(pPull.value);
+      const armLen = parseFloat(pArm.value);
+
+      const deltaTheta = (pullAngle - releaseAngle) * (Math.PI / 180);
+      const storedEnergy = 0.5 * k * Math.pow(deltaTheta, 2);
+      const inertia = (armLen / 100) * 1.5;
+      angularVel = Math.sqrt((2 * storedEnergy) / inertia) * (180 / Math.PI) * 0.46;
+    }
+
+    function triggerExplosion(x, y, colorArr) {
+      for (let i = 0; i < 28; i++) {
+        particles.push({
+          x: x, y: y,
+          vx: (Math.random() - 0.5) * 260,
+          vy: (Math.random() - 0.8) * 240,
+          radius: Math.random() * 4 + 2,
+          life: 1.0,
+          color: colorArr[Math.floor(Math.random() * colorArr.length)]
+        });
+      }
+    }
+
+    function handleCastleDestruction(hitIdx) {
+      if (army.state === 'garrisoned' && army.currentCastleIdx === hitIdx) {
+        army.state = 'retreating';
+        findFallbackCastle(hitIdx);
+        return;
+      }
+
+      const hitCastleCenterX = castles[hitIdx].x + castles[hitIdx].w / 2;
+      if (hitCastleCenterX < army.x) {
+        army.state = 'retreating';
+        findFallbackCastle(army.currentCastleIdx !== null ? army.currentCastleIdx : hitIdx);
+      }
+    }
+
+    function findFallbackCastle(fromIdx) {
+      soundRetreat();
+      let fallback = null;
+      let fallbackIdx = -1;
+
+      for (let i = 0; i < castles.length; i++) {
+        const cX = castles[i].x + castles[i].w / 2;
+        if (!castles[i].hit && cX > army.x + 10) {
+          if (!fallback || cX < fallback.x) {
+            fallback = castles[i];
+            fallbackIdx = i;
+          }
+        }
+      }
+
+      if (fallback) {
+        army.retreatTargetX = fallback.x + fallback.w / 2;
+        army.currentCastleIdx = fallbackIdx;
+        army.lastExitedCastleIdx = null;
+        gameStatus.innerText = `⚠️ Castle in front destroyed! Army retreating to Castle ${fallbackIdx + 1}!`;
+        gameStatus.style.color = "#ffca28";
+      } else {
+        army.retreatTargetX = 1320;
+        army.currentCastleIdx = null;
+        army.lastExitedCastleIdx = null;
+        gameStatus.innerText = `⚠️ Defense breached! Army retreating to rally point!`;
+        gameStatus.style.color = "#ffca28";
+      }
+    }
+
+    function applyDoubleHitBonus() {
+      soundCombo();
+      castles.forEach(c => {
+        if (c.hit) {
+          c.rebuildTimer = Math.max(c.rebuildTimer, COMBO_REBUILD_TIME);
+          c.maxTimer = COMBO_REBUILD_TIME;
+        }
+      });
+      gameStatus.innerText = `🔥 COMBO HIT! Rebuild timer extended to ${COMBO_REBUILD_TIME}s!`;
+      gameStatus.style.color = "#ffd700";
+      gameStatus.style.borderLeftColor = "#ffd700";
+    }
+
+    function checkCastleCollisions() {
+      let hitOccurred = false;
+      for (let i = 0; i < castles.length; i++) {
+        let c = castles[i];
+        if (!c.hit) {
+          if (ball.x >= c.x - 4 && ball.x <= c.x + c.w + 4 &&
+              ball.y >= c.y - 12 && ball.y <= c.y + c.h) {
+            c.hit = true;
+            c.rebuildTimer = BASE_REBUILD_TIME;
+            c.maxTimer = BASE_REBUILD_TIME;
+            hitsInCurrentShot++;
+            hitOccurred = true;
+
+            soundHit();
+            triggerExplosion(c.x + c.w / 2, c.y + c.h / 2, ['#757575', '#ff5722', '#ffeb3b', '#37474f']);
+            handleCastleDestruction(i);
+
+            const currentlyDestroyed = castles.filter(item => item.hit).length;
+            if (hitsInCurrentShot >= 2 || currentlyDestroyed >= 2) {
+              applyDoubleHitBonus();
+            }
+
+            checkWinCondition();
+            break;
+          }
+        }
+      }
+      return hitOccurred;
+    }
+
+    function checkWinCondition() {
+      const remaining = castles.filter(c => !c.hit).length;
+      statCastles.innerText = `${remaining} / 5`;
+      if (remaining === 0) {
+        gameState = 'won';
+        gameStatus.innerText = "👑 VICTORY! All castles destroyed! The shadow army scattered!";
+        gameStatus.style.color = "#00e676";
+        gameStatus.style.borderLeftColor = "#00e676";
+        triggerExplosion(army.x, getElevation(army.x) - 10, ['#00e676', '#ffeb3b', '#fff']);
+      }
+    }
+
+    function updateArmy(dt) {
+      if (gameState !== 'playing') return;
+
+      const distM = Math.max(0, ((army.x - BASE_X) / PIXEL_SCALE / 100)).toFixed(1);
+      statArmyDist.innerText = distM;
+
+      if (army.x <= BASE_X + 50) {
+        gameState = 'lost';
+        soundDefeat();
+        triggerExplosion(BASE_X, GROUND_Y - 60, ['#d50000', '#ff6d00', '#212121']);
+        gameStatus.innerText = "💀 DEFEAT! The shadow army stormed your catapult!";
+        gameStatus.style.color = "#ff1744";
+        gameStatus.style.borderLeftColor = "#ff1744";
+        fireBtn.disabled = true;
+        statArmyState.innerText = "Breached Base";
+        return;
+      }
+
+      if (army.state === 'garrisoned') {
+        statArmyState.innerText = `Garrisoned (C${army.currentCastleIdx + 1})`;
+        army.garrisonTimer -= dt;
+
+        if (army.currentCastleIdx !== null && castles[army.currentCastleIdx].hit) {
+          army.state = 'retreating';
+          findFallbackCastle(army.currentCastleIdx);
+          return;
+        }
+
+        if (army.garrisonTimer <= 0) {
+          army.lastExitedCastleIdx = army.currentCastleIdx;
+          army.currentCastleIdx = null;
+          army.state = 'advancing';
+          army.x -= 18;
+          gameStatus.innerText = "⚔️ Army emerges from the castle and begins marching forward!";
+          gameStatus.style.color = "#ff9800";
+        }
+      } else if (army.state === 'retreating') {
+        statArmyState.innerText = "Retreating";
+        army.x += army.retreatSpeed * dt;
+
+        if (army.x >= army.retreatTargetX) {
+          army.x = army.retreatTargetX;
+          army.state = 'garrisoned';
+          army.garrisonTimer = 5.0;
+          army.lastExitedCastleIdx = null;
+          gameStatus.innerText = "🛡️ Army fortified inside fallback castle!";
+          gameStatus.style.color = "#81c784";
+        }
+      } else if (army.state === 'advancing') {
+        statArmyState.innerText = "Marching Slow";
+        army.x -= army.marchSpeed * dt;
+
+        for (let i = 0; i < castles.length; i++) {
+          if (i === army.lastExitedCastleIdx) continue;
+
+          const c = castles[i];
+          const cCenter = c.x + c.w / 2;
+          if (!c.hit && Math.abs(army.x - cCenter) < 10) {
+            army.x = cCenter;
+            army.currentCastleIdx = i;
+            army.lastExitedCastleIdx = null;
+            army.state = 'garrisoned';
+            army.garrisonTimer = 7.0;
+            gameStatus.innerText = `🏰 Army occupied Castle ${i + 1}! Prepare for the next wave.`;
+            gameStatus.style.color = "#29b6f6";
+            break;
+          }
+        }
+      }
+    }
+
+    function updateRebuildingCastles(dt) {
+      castles.forEach((c) => {
+        if (c.hit) {
+          c.rebuildTimer -= dt;
+          if (c.rebuildTimer <= 0) {
+            c.hit = false;
+            c.maxTimer = BASE_REBUILD_TIME;
+            
+            const direction = Math.random() < 0.5 ? -1 : 1;
+            const shiftOffset = direction * (25 + Math.random() * 20);
+            
+            c.x = Math.round(c.baseX + shiftOffset);
+            c.y = getElevation(c.x + c.w / 2) - c.h;
+            
+            triggerExplosion(c.x + c.w / 2, c.y + c.h / 2, ['#81c784', '#a5d6a7', '#fff']);
+            checkWinCondition();
+          }
+        }
+      });
+      const remaining = castles.filter(c => !c.hit).length;
+      statCastles.innerText = `${remaining} / 5`;
+    }
+
+    function updatePhysics(dt) {
+      const pivot = getPivotCoords();
+      const armLen = parseFloat(pArm.value);
+
+      if (catapultState === 'firing') {
+        currentArmAngle -= angularVel * dt;
+
+        if (currentArmAngle <= releaseAngle) {
+          currentArmAngle = releaseAngle;
+          catapultState = 'flying';
+
+          const rMeters = armLen / 100;
+          const omegaRad = angularVel * (Math.PI / 180);
+          const linearSpeed = omegaRad * rMeters * 0.96;
+
+          const releaseRad = releaseAngle * (Math.PI / 180);
+          ball.vx = linearSpeed * Math.cos(releaseRad) * 100;
+          ball.vy = -linearSpeed * Math.sin(releaseRad) * 100 - (linearSpeed * 76);
+
+          const cup = getCupCoords(pivot, armLen, currentArmAngle);
+          ball.x = cup.x; ball.y = cup.y;
+          trajectory.push({ x: ball.x, y: ball.y });
+          statV0.innerText = linearSpeed.toFixed(2);
+        } else {
+          const cup = getCupCoords(pivot, armLen, currentArmAngle);
+          ball.x = cup.x; ball.y = cup.y;
+        }
+      } else if (catapultState === 'flying') {
+        ball.x += (ball.vx * dt) * PIXEL_SCALE;
+        ball.vy += (GRAVITY * dt);
+        ball.y += (ball.vy * dt) * PIXEL_SCALE;
+
+        trajectory.push({ x: ball.x, y: ball.y });
+
+        const groundLevel = getElevation(ball.x);
+        const hit = checkCastleCollisions();
+
+        if (hit || ball.y >= groundLevel - ball.radius || ball.x > canvas.width + 50) {
+          ball.y = Math.min(ball.y, groundLevel - ball.radius);
+          catapultState = 'finished';
+          const rangeCm = (ball.x - pivot.x) / PIXEL_SCALE;
+          statRange.innerText = Math.max(0, rangeCm / 100).toFixed(2);
+          scheduleAutoReload();
+        }
+      }
+
+      for (let i = particles.length - 1; i >= 0; i--) {
+        let p = particles[i];
+        p.x += p.vx * dt; p.y += p.vy * dt;
+        p.vy += GRAVITY * 0.4 * dt;
+        p.life -= dt * 1.4;
+        if (p.life <= 0) particles.splice(i, 1);
+      }
+    }
+
+    function drawCastle(c, idx) {
+      if (c.hit) {
+        ctx.fillStyle = "#616161";
+        ctx.beginPath();
+        ctx.moveTo(c.x, c.y + c.h);
+        ctx.lineTo(c.x + c.w * 0.3, c.y + c.h - 12);
+        ctx.lineTo(c.x + c.w * 0.7, c.y + c.h - 8);
+        ctx.lineTo(c.x + c.w, c.y + c.h);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = c.maxTimer > BASE_REBUILD_TIME ? "#ffd700" : "#ffb300";
+        ctx.font = "bold 11px sans-serif";
+        ctx.fillText(`Rebuild: ${Math.ceil(c.rebuildTimer)}s`, c.x - 8, c.y + c.h - 18);
+        return;
+      }
+
+      const isOccupied = (army.state === 'garrisoned' && army.currentCastleIdx === idx);
+
+      ctx.fillStyle = isOccupied ? "#5c677d" : "#8d99ae";
+      ctx.fillRect(c.x, c.y, c.w, c.h);
+      ctx.strokeStyle = "#2b2d42";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(c.x, c.y, c.w, c.h);
+
+      const tw = c.w * 0.28;
+      ctx.fillStyle = isOccupied ? "#495057" : "#6c757d";
+      ctx.fillRect(c.x - 2, c.y - 10, tw, c.h + 10);
+      ctx.strokeRect(c.x - 2, c.y - 10, tw, c.h + 10);
+      ctx.fillRect(c.x + c.w - tw + 2, c.y - 10, tw, c.h + 10);
+      ctx.strokeRect(c.x + c.w - tw + 2, c.y - 10, tw, c.h + 10);
+
+      ctx.fillStyle = "#343a40";
+      ctx.fillRect(c.x - 3, c.y - 16, tw / 2, 6);
+      ctx.fillRect(c.x + c.w - tw / 2 + 2, c.y - 16, tw / 2, 6);
+
+      ctx.fillStyle = isOccupied ? "#111" : "#212529";
+      ctx.beginPath();
+      ctx.arc(c.x + c.w / 2, c.y + c.h - 12, 7, Math.PI, 0);
+      ctx.lineTo(c.x + c.w / 2 + 7, c.y + c.h);
+      ctx.lineTo(c.x + c.w / 2 - 7, c.y + c.h);
+      ctx.closePath(); ctx.fill();
+
+      ctx.strokeStyle = "#000"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(c.x + c.w / 2, c.y); ctx.lineTo(c.x + c.w / 2, c.y - 14); ctx.stroke();
+      ctx.fillStyle = isOccupied ? "#000000" : "#d90429";
+      ctx.beginPath();
+      ctx.moveTo(c.x + c.w / 2, c.y - 14); ctx.lineTo(c.x + c.w / 2 + 9, c.y - 9); ctx.lineTo(c.x + c.w / 2, c.y - 4);
+      ctx.closePath(); ctx.fill();
+
+      if (isOccupied) {
+        ctx.fillStyle = "#ff1744";
+        ctx.font = "bold 11px sans-serif";
+        ctx.fillText(`Occupied (${Math.ceil(army.garrisonTimer)}s)`, c.x - 12, c.y - 20);
+      }
+    }
+
+    function drawShadowArmy() {
+      if (gameState === 'won' || army.state === 'garrisoned') return;
+
+      const gy = getElevation(army.x);
+      ctx.save();
+      ctx.translate(army.x, gy);
+
+      ctx.fillStyle = "rgba(18, 18, 18, 0.95)";
+      ctx.beginPath();
+      ctx.ellipse(0, -6, 26, 9, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      for (let i = -20; i <= 20; i += 7) {
+        const bob = Math.sin(performance.now() * 0.008 + i) * 2;
+        ctx.fillStyle = "#0a0a0a";
+        ctx.beginPath();
+        ctx.arc(i, -14 + bob, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = "#333";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(i, -12 + bob);
+        ctx.lineTo(i - 4, -22 + bob);
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = "#111";
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(0, -28); ctx.stroke();
+      ctx.fillStyle = army.state === 'retreating' ? '#ff9800' : '#d50000';
+      ctx.beginPath();
+      ctx.moveTo(0, -28); ctx.lineTo(-12, -22); ctx.lineTo(0, -16);
+      ctx.closePath(); ctx.fill();
+
+      ctx.restore();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+      skyGrad.addColorStop(0, '#3a7bd5');
+      skyGrad.addColorStop(1, '#d7e1ec');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.beginPath();
+      ctx.moveTo(0, GROUND_Y);
+      ctx.lineTo(780, GROUND_Y);
+      ctx.bezierCurveTo(840, GROUND_Y, 920, GROUND_Y - 50, 1000, GROUND_Y - 50);
+      ctx.bezierCurveTo(1060, GROUND_Y - 50, 1120, GROUND_Y - 120, 1180, GROUND_Y - 120);
+      ctx.lineTo(canvas.width, GROUND_Y - 160);
+      ctx.lineTo(canvas.width, canvas.height);
+      ctx.lineTo(0, canvas.height);
+      ctx.closePath();
+      ctx.fillStyle = '#43a047';
+      ctx.fill();
+      ctx.strokeStyle = '#2e7d32';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      castles.forEach((c, idx) => drawCastle(c, idx));
+      drawShadowArmy();
+
+      const pivot = getPivotCoords();
+      const armLen = parseFloat(pArm.value);
+      const platH_px = pivot.platH_px;
+      const baseTop = GROUND_Y - platH_px;
+
+      if (platH_px > 0) {
+        ctx.fillStyle = '#4e342e';
+        ctx.fillRect(BASE_X - 50, baseTop, 100, platH_px);
+        ctx.strokeStyle = '#2d1b17';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(BASE_X - 50, baseTop, 100, platH_px);
+      }
+
+      if (gameState !== 'lost') {
+        ctx.beginPath();
+        ctx.moveTo(BASE_X - 40, baseTop);
+        ctx.lineTo(BASE_X + 38, baseTop);
+        ctx.lineTo(pivot.x, pivot.y);
+        ctx.closePath();
+        ctx.fillStyle = '#a16b47';
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#5c381e';
+        ctx.stroke();
+
+        const anchorX = BASE_X + 20;
+        const anchorY = baseTop - 8 - (pTension.value * 4);
+        const elasticPoint = getCupCoords(pivot, armLen * 0.45, currentArmAngle);
+
+        ctx.beginPath();
+        ctx.moveTo(anchorX, anchorY);
+        ctx.lineTo(elasticPoint.x, elasticPoint.y);
+        ctx.strokeStyle = '#e53935';
+        ctx.lineWidth = 3 + parseInt(pTension.value);
+        ctx.stroke();
+
+        ctx.save();
+        ctx.translate(pivot.x, pivot.y);
+        ctx.rotate(-currentArmAngle * (Math.PI / 180));
+        const armPx = armLen * PIXEL_SCALE;
+        ctx.fillStyle = '#8d5b34';
+        ctx.fillRect(-6, -armPx, 12, armPx + 14);
+        ctx.strokeStyle = '#4e2c11';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-6, -armPx, 12, armPx + 14);
+
+        ctx.beginPath();
+        ctx.arc(0, -armPx, 11, 0, Math.PI);
+        ctx.fillStyle = '#b08456';
+        ctx.fill(); ctx.stroke();
+        ctx.restore();
+
+        ctx.beginPath();
+        ctx.arc(pivot.x, pivot.y, 5, 0, Math.PI * 2);
+        ctx.fillStyle = '#cfd8dc';
+        ctx.fill(); ctx.stroke();
+
+        const cup = getCupCoords(pivot, armLen, currentArmAngle);
+        const bx = (catapultState === 'flying' || catapultState === 'finished') ? ball.x : cup.x;
+        const by = (catapultState === 'flying' || catapultState === 'finished') ? ball.y : cup.y;
+
+        ctx.beginPath();
+        ctx.arc(bx, by, ball.radius, 0, Math.PI * 2);
+        ctx.fillStyle = '#ff6f00';
+        ctx.fill(); ctx.lineWidth = 2;
+        ctx.strokeStyle = '#fff'; ctx.stroke();
+      }
+
+      if (trajectory.length > 1) {
+        ctx.beginPath();
+        ctx.setLineDash([5, 4]);
+        ctx.moveTo(trajectory[0].x, trajectory[0].y);
+        for (let i = 1; i < trajectory.length; i++) ctx.lineTo(trajectory[i].x, trajectory[i].y);
+        ctx.strokeStyle = 'rgba(230, 81, 0, 0.85)';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      particles.forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius * p.life, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.life;
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+      });
+    }
+
+    let lastTime = performance.now();
+    function loop(currentTime) {
+      const dt = Math.min((currentTime - lastTime) / 1000, 0.05);
+      lastTime = currentTime;
+
+      updatePhysics(dt);
+      updateArmy(dt);
+      updateRebuildingCastles(dt);
+
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    [pPull, pArm, pTension, pPivotH, pPlatform].forEach(input => {
+      input.addEventListener('input', () => {
+        updateLabels();
+        if (catapultState === 'ready' && gameState === 'playing') {
+          currentArmAngle = parseFloat(pPull.value);
+          const pivot = getPivotCoords();
+          const cup = getCupCoords(pivot, parseFloat(pArm.value), currentArmAngle);
+          ball.x = cup.x; ball.y = cup.y;
+        }
+      });
+    });
+
+    fireBtn.addEventListener('click', fire);
+    document.getElementById('resetBtn').addEventListener('click', resetSimulation);
+    document.getElementById('restartGameBtn').addEventListener('click', restartWar);
+
+    updateLabels();
+    initCastles();
+    restartWar();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

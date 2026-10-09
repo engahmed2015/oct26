@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roboplanet - Game for Little Coders</title>
+  <style>
+    :root {
+      --rp-purple: #5e2a8c;
+      --rp-purple-light: #7b3eb5;
+      --rp-purple-dark: #3c165d;
+      --rp-orange: #f39200;
+      --rp-orange-light: #ffaa2b;
+      --bg: #1a0b2e;
+      --card: #271244;
+      --border: #4d2379;
+      --gold: #ffc107;
+      --cell-bg: #1e0d36;
+    }
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; user-select: none; }
+    body {
+      margin: 0;
+      background: radial-gradient(circle at top, #2e1254 0%, var(--bg) 100%);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 10px;
+    }
+    .game-container {
+      background: var(--card);
+      border-radius: 28px;
+      padding: 16px;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.6), 0 0 20px rgba(243, 146, 0, 0.15);
+      border: 2px solid var(--border);
+      text-align: center;
+      position: relative;
+    }
+    
+    /* Branding Header */
+    .brand-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 8px;
+      gap: 3px;
+    }
+    .brand-logo-wrap {
+      width: 58px;
+      height: 58px;
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+    }
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 900;
+      color: var(--rp-orange);
+      letter-spacing: 0.5px;
+      margin: 0;
+      text-transform: uppercase;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    }
+    .brand-subtitle {
+      font-size: 0.76rem;
+      color: #d8b4fe;
+      margin: 0;
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      padding: 0 4px;
+    }
+    .badge {
+      background: rgba(243, 146, 0, 0.15);
+      color: var(--rp-orange);
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      border: 1px solid var(--rp-orange);
+    }
+    .gamepad-status {
+      font-size: 0.8rem;
+      color: #c4b5fd;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .gamepad-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #64748b;
+      display: inline-block;
+    }
+    .gamepad-dot.connected {
+      background: var(--rp-orange);
+      box-shadow: 0 0 8px var(--rp-orange);
+    }
+
+    .task-banner {
+      background: var(--cell-bg);
+      border: 1px solid var(--border);
+      padding: 7px;
+      border-radius: 12px;
+      margin-bottom: 10px;
+      font-size: 0.86rem;
+      font-weight: bold;
+      color: var(--rp-orange-light);
+    }
+
+    /* Grid */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-gap: 8px;
+      background: var(--cell-bg);
+      padding: 10px;
+      border-radius: 18px;
+      margin-bottom: 10px;
+      border: 1px solid var(--border);
+    }
+    .cell {
+      aspect-ratio: 1;
+      background: var(--card);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.9rem;
+      transition: transform 0.12s ease, background 0.12s ease;
+      border: 1px solid var(--border);
+    }
+    .cell.active {
+      background: #ffffff;
+      border-color: var(--rp-orange);
+      transform: scale(1.06);
+      box-shadow: 0 0 14px rgba(243, 146, 0, 0.5);
+    }
+    .cell svg.board-robot {
+      width: 78%;
+      height: 78%;
+    }
+
+    /* Queue */
+    .queue-title {
+      font-size: 0.8rem;
+      color: #c4b5fd;
+      margin-bottom: 5px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .queue-box {
+      background: var(--cell-bg);
+      border: 2px dashed var(--border);
+      border-radius: 14px;
+      min-height: 46px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      margin-bottom: 10px;
+      overflow-x: auto;
+    }
+    .cmd-item {
+      background: var(--rp-purple);
+      border: 1px solid var(--rp-orange);
+      padding: 5px 11px;
+      border-radius: 8px;
+      font-size: 1.15rem;
+      animation: pop 0.18s ease-out;
+      flex-shrink: 0;
+    }
+    @keyframes pop {
+      0% { transform: scale(0.5); }
+      100% { transform: scale(1); }
+    }
+
+    /* Direction Controls */
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .btn-dir {
+      border: none;
+      border-radius: 14px;
+      padding: 10px 0;
+      color: white;
+      font-size: 1.5rem;
+      cursor: pointer;
+      box-shadow: 0 4px 0 rgba(0,0,0,0.3);
+      transition: all 0.1s;
+    }
+    .btn-dir:active { transform: translateY(3px); box-shadow: none; }
+    .btn-up { background: var(--rp-purple-light); }
+    .btn-right { background: var(--rp-orange); }
+    .btn-left { background: var(--rp-orange); }
+    .btn-down { background: var(--rp-purple); }
+
+    /* Actions */
+    .actions { display: flex; gap: 8px; }
+    .btn-run {
+      flex: 2;
+      background: var(--rp-orange);
+      border: none;
+      color: #1a0b2e;
+      font-weight: 900;
+      font-size: 1.02rem;
+      padding: 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #b36b00;
+    }
+    .btn-clear {
+      flex: 1;
+      background: #ef4444;
+      border: none;
+      color: white;
+      font-weight: bold;
+      font-size: 0.95rem;
+      padding: 12px;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+    .btn-run:active, .btn-clear:active { transform: translateY(2px); }
+
+    /* Popups / Modals */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 5, 29, 0.88);
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 20;
+    }
+    .modal-card {
+      background: var(--card);
+      border-radius: 24px;
+      padding: 25px 20px;
+      text-align: center;
+      max-width: 340px;
+      width: 100%;
+      border: 2px solid var(--rp-orange);
+      animation: pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .btn-modal-action {
+      background: var(--rp-orange);
+      color: #1a0b2e;
+      border: none;
+      font-size: 1.05rem;
+      font-weight: 800;
+      padding: 12px 20px;
+      border-radius: 12px;
+      cursor: pointer;
+      margin-top: 15px;
+      width: 100%;
+    }
+  </style>
+</head>
+<body onclick="ensureAudioReady()">
+
+<!-- تعريف الرسوميات SVGs -->
+<svg style="display: none;">
+  <defs>
+    <!-- اللوجو الرسمي في الأعلى -->
+    <g id="roboplanet-logo">
+      <line x1="100" y1="28" x2="100" y2="40" stroke="#5e2a8c" stroke-width="7" stroke-linecap="round"/>
+      <circle cx="100" cy="22" r="6" fill="none" stroke="#5e2a8c" stroke-width="6"/>
+      <path d="M 88 40 Q 100 32 112 40 Z" fill="#5e2a8c"/>
+      <path d="M 52 110 L 148 110 L 148 135 C 148 170 52 170 52 135 Z" fill="#5e2a8c"/>
+      <ellipse cx="100" cy="184" rx="28" ry="3.5" fill="#5e2a8c"/>
+      <path d="M 52 124 L 28 130 L 22 115" fill="none" stroke="#5e2a8c" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="28" cy="130" r="5" fill="#fff" stroke="#5e2a8c" stroke-width="4"/>
+      <path d="M 12 108 C 12 118 32 118 32 108" fill="none" stroke="#5e2a8c" stroke-width="6" stroke-linecap="round"/>
+      <path d="M 148 124 L 172 130 L 178 115" fill="none" stroke="#5e2a8c" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="172" cy="130" r="5" fill="#fff" stroke="#5e2a8c" stroke-width="4"/>
+      <path d="M 168 108 C 168 118 188 118 188 108" fill="none" stroke="#5e2a8c" stroke-width="6" stroke-linecap="round"/>
+      <path d="M 23 80 C 23 48 177 48 177 80" fill="none" stroke="#f39200" stroke-width="12" stroke-linecap="round"/>
+      <circle cx="100" cy="74" r="50" fill="#5e2a8c"/>
+      <path d="M 64 56 A 42 42 0 0 1 82 40" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round"/>
+      <circle cx="76" cy="54" r="2.5" fill="#ffffff"/>
+      <path d="M 82 92 Q 100 106 118 92" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round"/>
+      <path d="M 23 80 C 23 112 177 112 177 80" fill="none" stroke="#f39200" stroke-width="12" stroke-linecap="round"/>
+      <circle cx="162" cy="65" r="12" fill="#5e2a8c"/>
+      <circle cx="158" cy="61" r="2" fill="#ffffff"/>
+      <circle cx="164" cy="68" r="3" fill="#ffffff"/>
+      <circle cx="158" cy="69" r="1.5" fill="#ffffff"/>
+    </g>
+
+    <!-- روبوت اللعب الأبيض والأسود عالي التباين -->
+    <g id="mono-robot">
+      <rect x="25" y="25" width="50" height="42" rx="10" fill="#111827" stroke="#111827" stroke-width="2"/>
+      <!-- Ears / Antennas -->
+      <line x1="50" y1="25" x2="50" y2="12" stroke="#111827" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="50" cy="9" r="4" fill="#e11d48"/>
+      <rect x="16" y="38" width="6" height="16" rx="3" fill="#111827"/>
+      <rect x="78" y="38" width="6" height="16" rx="3" fill="#111827"/>
+      <!-- Screen -->
+      <rect x="32" y="33" width="36" height="25" rx="6" fill="#ffffff"/>
+      <!-- Eyes -->
+      <rect x="39" y="40" width="7" height="10" rx="3" fill="#111827"/>
+      <rect x="54" y="40" width="7" height="10" rx="3" fill="#111827"/>
+      <!-- Cheeks -->
+      <circle cx="36" cy="52" r="2" fill="#e11d48"/>
+      <circle cx="64" cy="52" r="2" fill="#e11d48"/>
+      <!-- Neck & Body -->
+      <rect x="44" y="68" width="12" height="6" fill="#111827"/>
+      <path d="M 30 75 L 70 75 L 66 94 L 34 94 Z" fill="#111827"/>
+      <line x1="50" y1="78" x2="50" y2="90" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+    </g>
+  </defs>
+</svg>
+
+<div class="game-container">
+  <div class="brand-header">
+    <div class="brand-logo-wrap">
+      <svg viewBox="0 0 200 200" width="100%" height="100%"><use href="#roboplanet-logo"/></svg>
+    </div>
+    <h1 class="brand-title">Roboplanet</h1>
+    <p class="brand-subtitle">GAME FOR LITTLE CODERS</p>
+  </div>
+
+  <div class="header-bar">
+    <span class="badge" id="level-title">المرحلة 1 من 3</span>
+    <div class="gamepad-status">
+      <span class="gamepad-dot" id="gp-dot"></span>
+      <span id="gp-text">USB Joystick</span>
+    </div>
+  </div>
+
+  <div class="task-banner" id="task-banner">
+    المهمة 1: حرّك الروبوت مباشرة للوصول للبطارية 🎮
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="queue-title">
+    <span id="queue-label">المسار المسجل:</span>
+    <span id="step-count">0 أوامر</span>
+  </div>
+  <div class="queue-box" id="queue"></div>
+
+  <div class="controls">
+    <button class="btn-dir btn-left" id="btn-left" onclick="handleDirection('left')">⬅️</button>
+    <button class="btn-dir btn-up" id="btn-up" onclick="handleDirection('up')">⬆️</button>
+    <button class="btn-dir btn-right" id="btn-right" onclick="handleDirection('right')">➡️</button>
+    <button class="btn-dir btn-down" id="btn-down" style="grid-column: 2;" onclick="handleDirection('down')">⬇️</button>
+  </div>
+
+  <div class="actions">
+    <button class="btn-clear" onclick="resetLevel()">إعادة (Start) 🔄</button>
+    <button class="btn-run" id="btn-run" style="display: none;" onclick="runProgram()">تشغيل الكود (✖️ السفلي) 🚀</button>
+  </div>
+</div>
+
+<!-- Modal الانتقال لمرحلة كتابة الكود (بديل الـ alert) -->
+<div class="modal" id="transition-modal">
+  <div class="modal-card">
+    <div style="font-size: 3.5rem; margin-bottom: 6px;">💡</div>
+    <h2 style="color: var(--rp-orange); margin: 0 0 8px;">رائع جداً يا بطل!</h2>
+    <p style="color: #d8b4fe; margin: 0; font-size: 0.95rem; line-height: 1.5;">
+      الآن جاء دورك لتكون مبرمجاً حقيقياً!<br>
+      اكتب نفس المسار بالأسهم ثم اضغط الزر السفلي لتشغيل الكود.
+    </p>
+    <button class="btn-modal-action" onclick="dismissTransitionModal()">ابدأ كتابة الكود (اضغط ✖️) 💻</button>
+  </div>
+</div>
+
+<!-- Modal الفوز بالمرحلة بالكامل -->
+<div class="modal" id="win-modal">
+  <div class="modal-card">
+    <div style="width: 80px; height: 80px; margin: 0 auto 8px;">
+      <svg viewBox="0 0 200 200" width="100%" height="100%"><use href="#roboplanet-logo"/></svg>
+    </div>
+    <h2 style="color: var(--rp-orange); margin: 0 0 8px;">بطل روبوبلانيت الصغير! 🌟</h2>
+    <p style="color: #d8b4fe; margin: 0; font-size: 0.95rem;">أتقنت البرمجة وشحنت الروبوت بنجاح!</p>
+    <button class="btn-modal-action" onclick="nextLevel()">المرحلة التالية (اضغط ✖️) ⚡</button>
+  </div>
+</div>
+
+<script>
+  // نظام الصوت الفوري - تهيئة وتجاوز قيود المتصفح
+  let audioCtx = null;
+
+  function ensureAudioReady() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+  }
+
+  function playSound(type) {
+    ensureAudioReady();
+    if (!audioCtx) return;
+
+    const now = audioCtx.currentTime;
+
+    if (type === 'move') {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(400, now);
+      osc.frequency.exponentialRampToValueAtTime(750, now + 0.07);
+      gain.gain.setValueAtTime(0.25, now);
+      gain.gain.linearRampToValueAtTime(0.01, now + 0.07);
+      osc.start(now);
+      osc.stop(now + 0.07);
+    } else if (type === 'select') {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(850, now);
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.linearRampToValueAtTime(0.01, now + 0.05);
+      osc.start(now);
+      osc.stop(now + 0.05);
+    } else if (type === 'bump') {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(150, now);
+      osc.frequency.linearRampToValueAtTime(60, now + 0.12);
+      gain.gain.setValueAtTime(0.25, now);
+      gain.gain.linearRampToValueAtTime(0.01, now + 0.12);
+      osc.start(now);
+      osc.stop(now + 0.12);
+    } else if (type === 'win') {
+      [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+        const nOsc = audioCtx.createOscillator();
+        const nGain = audioCtx.createGain();
+        nOsc.connect(nGain);
+        nGain.connect(audioCtx.destination);
+        nOsc.type = 'triangle';
+        nOsc.frequency.setValueAtTime(freq, now + i * 0.09);
+        nGain.gain.setValueAtTime(0.25, now + i * 0.09);
+        nGain.gain.linearRampToValueAtTime(0.01, now + i * 0.09 + 0.18);
+        nOsc.start(now + i * 0.09);
+        nOsc.stop(now + i * 0.09 + 0.18);
+      });
+    }
+  }
+
+  // مستويات اللعبة
+  const levels = [
+    { start: {x: 0, y: 0}, target: {x: 3, y: 0}, obstacles: [{x: 1, y: 1}, {x: 2, y: 1}] },
+    { start: {x: 0, y: 0}, target: {x: 3, y: 3}, obstacles: [{x: 1, y: 1}, {x: 2, y: 1}, {x: 1, y: 2}] },
+    { start: {x: 0, y: 3}, target: {x: 3, y: 0}, obstacles: [{x: 0, y: 1}, {x: 1, y: 2}, {x: 2, y: 1}] }
+  ];
+
+  let currentLevel = 0;
+  let subStep = 1; // 1: تحكم لحظي، 2: كتابة خوارزمية
+  let robot = {x: 0, y: 0};
+  let commands = [];
+  let isRunning = false;
+  let isLevelWon = false;
+  let isTransitionModalOpen = false;
+
+  function initLevel() {
+    const lvl = levels[currentLevel];
+    robot = { ...lvl.start };
+    commands = [];
+    isRunning = false;
+    isLevelWon = false;
+    isTransitionModalOpen = false;
+
+    document.getElementById('level-title').innerText = `المرحلة ${currentLevel + 1} من ${levels.length}`;
+    document.getElementById('win-modal').style.display = 'none';
+    document.getElementById('transition-modal').style.display = 'none';
+
+    if (subStep === 1) {
+      document.getElementById('task-banner').innerText = `المهمة 1: حرّك الروبوت مباشرة للوصول للبطارية 🎮`;
+      document.getElementById('btn-run').style.display = 'none';
+      document.getElementById('queue-label').innerText = 'المسار المسجل:';
+    } else {
+      document.getElementById('task-banner').innerText = `المهمة 2: اكتب المسار بالأسهم، ثم اضغط (✖️ السفلي) لتشغيل الكود 💻`;
+      document.getElementById('btn-run').style.display = 'block';
+      document.getElementById('queue-label').innerText = 'أوامرك البرمجية:';
+    }
+
+    renderQueue();
+    drawGrid();
+  }
+
+  function drawGrid() {
+    const grid = document.getElementById('grid');
+    grid.innerHTML = '';
+    const lvl = levels[currentLevel];
+
+    for (let y = 0; y < 4; y++) {
+      for (let x = 0; x < 4; x++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.id = `cell-${x}-${y}`;
+
+        if (robot.x === x && robot.y === y) {
+          // رسم الروبوت الأيقوني الأبيض والأسود داخل اللعبة
+          cell.innerHTML = `<svg class="board-robot" viewBox="0 0 100 100"><use href="#mono-robot"/></svg>`;
+          cell.classList.add('active');
+        } else if (lvl.target.x === x && lvl.target.y === y) {
+          cell.innerText = '🔋';
+        } else if (lvl.obstacles.some(ob => ob.x === x && ob.y === y)) {
+          cell.innerText = '☄️';
+        }
+        grid.appendChild(cell);
+      }
+    }
+  }
+
+  function handleDirection(dir) {
+    if (isRunning || isLevelWon || isTransitionModalOpen) return;
+
+    if (subStep === 1) {
+      moveRobotInstant(dir);
+    } else {
+      if (commands.length < 10) {
+        playSound('select');
+        commands.push(dir);
+        renderQueue();
+      }
+    }
+  }
+
+  function moveRobotInstant(dir) {
+    const lvl = levels[currentLevel];
+    let nextX = robot.x;
+    let nextY = robot.y;
+
+    if (dir === 'left') nextX += 1;
+    if (dir === 'right') nextX -= 1;
+    if (dir === 'up') nextY -= 1;
+    if (dir === 'down') nextY += 1;
+
+    if (nextX < 0 || nextX > 3 || nextY < 0 || nextY > 3 || lvl.obstacles.some(ob => ob.x === nextX && ob.y === nextY)) {
+      playSound('bump');
+      shakeRobot();
+      return;
+    }
+
+    playSound('move');
+    robot = { x: nextX, y: nextY };
+    commands.push(dir);
+    renderQueue();
+    drawGrid();
+
+    if (robot.x === lvl.target.x && robot.y === lvl.target.y) {
+      playSound('win');
+      setTimeout(() => {
+        // إظهار نافذة الانتقال للنمط البرمجي بدون alert
+        isTransitionModalOpen = true;
+        document.getElementById('transition-modal').style.display = 'flex';
+      }, 300);
+    }
+  }
+
+  function dismissTransitionModal() {
+    isTransitionModalOpen = false;
+    document.getElementById('transition-modal').style.display = 'none';
+    subStep = 2;
+    initLevel();
+  }
+
+  async function runProgram() {
+    if (isRunning || commands.length === 0 || isLevelWon || isTransitionModalOpen) return;
+    isRunning = true;
+    const lvl = levels[currentLevel];
+    robot = { ...lvl.start };
+    drawGrid();
+    await new Promise(r => setTimeout(r, 200));
+
+    for (let cmd of commands) {
+      let nextX = robot.x;
+      let nextY = robot.y;
+
+      if (cmd === 'left') nextX += 1;
+      if (cmd === 'right') nextX -= 1;
+      if (cmd === 'up') nextY -= 1;
+      if (cmd === 'down') nextY += 1;
+
+      if (nextX < 0 || nextX > 3 || nextY < 0 || nextY > 3 || lvl.obstacles.some(ob => ob.x === nextX && ob.y === nextY)) {
+        playSound('bump');
+        shakeRobot();
+        break;
+      }
+
+      playSound('move');
+      robot = { x: nextX, y: nextY };
+      drawGrid();
+      await new Promise(r => setTimeout(r, 450));
+    }
+
+    if (robot.x === lvl.target.x && robot.y === lvl.target.y) {
+      isLevelWon = true;
+      playSound('win');
+      setTimeout(() => {
+        document.getElementById('win-modal').style.display = 'flex';
+      }, 250);
+    } else {
+      setTimeout(() => {
+        shakeRobot();
+      }, 200);
+    }
+    isRunning = false;
+  }
+
+  function renderQueue() {
+    const symbols = { up: '⬆️', down: '⬇️', left: '⬅️', right: '➡️' };
+    const queue = document.getElementById('queue');
+    queue.innerHTML = commands.map(c => `<div class="cmd-item">${symbols[c]}</div>`).join('');
+    document.getElementById('step-count').innerText = `${commands.length} أوامر`;
+    queue.scrollLeft = -queue.scrollWidth;
+  }
+
+  function shakeRobot() {
+    const el = document.getElementById(`cell-${robot.x}-${robot.y}`);
+    if (el) {
+      el.style.transform = 'scale(1.15) rotate(12deg)';
+      setTimeout(() => el.style.transform = '', 200);
+    }
+  }
+
+  function resetLevel() {
+    initLevel();
+  }
+
+  function nextLevel() {
+    currentLevel = (currentLevel + 1) % levels.length;
+    subStep = 1;
+    initLevel();
+  }
+
+  // Gamepad Polling & Joystick Handling
+  let lastStickTime = 0;
+  let prevBtnState = {};
+
+  window.addEventListener('gamepadconnected', () => {
+    ensureAudioReady();
+    document.getElementById('gp-dot').classList.add('connected');
+    document.getElementById('gp-text').innerText = 'الـ Joystick متصل';
+  });
+
+  window.addEventListener('gamepaddisconnected', () => {
+    document.getElementById('gp-dot').classList.remove('connected');
+    document.getElementById('gp-text').innerText = 'Joystick غير متصل';
+  });
+
+  function pollGamepad() {
+    const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+    const gp = gamepads[0];
+
+    if (gp) {
+      ensureAudioReady();
+      const now = performance.now();
+      const btnBottom = gp.buttons[2]?.pressed || gp.buttons[0]?.pressed || gp.buttons[3]?.pressed; 
+      const btnStart = gp.buttons[9]?.pressed;
+
+      // 1. زر Start لإعادة المحاولة ومسح الأوامر
+      if (btnStart && !prevBtnState['start']) {
+        resetLevel();
+      }
+
+      // 2. زر X السفلي لتأكيد الانتقال أو تشغيل الكود
+      if (btnBottom && !prevBtnState['bottom']) {
+        if (isTransitionModalOpen) {
+          dismissTransitionModal();
+        } else if (isLevelWon) {
+          nextLevel();
+        } else if (subStep === 2) {
+          runProgram();
+        }
+      }
+
+      // 3. كتابة الأوامر أو التحرك بالـ Joystick
+      if (!isTransitionModalOpen && now - lastStickTime > 230) {
+        const axisX = gp.axes[0];
+        const axisY = gp.axes[1];
+        const dUp = gp.buttons[12]?.pressed;
+        const dDown = gp.buttons[13]?.pressed;
+        const dLeft = gp.buttons[14]?.pressed;
+        const dRight = gp.buttons[15]?.pressed;
+
+        if (axisX < -0.5 || dLeft) { handleDirection('left'); lastStickTime = now; }
+        else if (axisX > 0.5 || dRight) { handleDirection('right'); lastStickTime = now; }
+        else if (axisY < -0.5 || dUp) { handleDirection('up'); lastStickTime = now; }
+        else if (axisY > 0.5 || dDown) { handleDirection('down'); lastStickTime = now; }
+      }
+
+      prevBtnState['bottom'] = btnBottom;
+      prevBtnState['start'] = btnStart;
+    }
+
+    requestAnimationFrame(pollGamepad);
+  }
+
+  // Keyboard Support
+  window.addEventListener('keydown', (e) => {
+    ensureAudioReady();
+    if (e.key === 'ArrowLeft') handleDirection('left');
+    if (e.key === 'ArrowRight') handleDirection('right');
+    if (e.key === 'ArrowUp') handleDirection('up');
+    if (e.key === 'ArrowDown') handleDirection('down');
+    if (e.key.toLowerCase() === 'x' || e.key === 'Enter') {
+      if (isTransitionModalOpen) dismissTransitionModal();
+      else if (isLevelWon) nextLevel();
+      else if (subStep === 2) runProgram();
+    }
+  });
+
+  initLevel();
+  requestAnimationFrame(pollGamepad);
+</script>
+</body>
+</html>

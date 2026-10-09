@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <title>Catapult Castle Siege Simulator</title>
+  <style>
+    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { margin: 0; padding: 12px; background: #141619; color: #fff; display: flex; flex-direction: column; align-items: center; }
+    h1 { margin: 0 0 10px 0; font-size: 20px; color: #ffca28; }
+    .main-container { display: flex; flex-wrap: wrap; gap: 15px; width: 100%; max-width: 1500px; }
+    .canvas-container { flex: 1; min-width: 900px; background: #87CEEB; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.6); }
+    canvas { display: block; width: 100%; height: 550px; }
+    .controls-panel { width: 320px; background: #22252a; padding: 16px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
+    .control-group { margin-bottom: 12px; }
+    .control-group label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; color: #cfd8dc; }
+    .control-group label span { font-weight: bold; color: #ffca28; }
+    input[type=range] { width: 100%; accent-color: #ff9800; cursor: pointer; }
+    .btn-group { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+    .btn-row { display: flex; gap: 8px; }
+    button { flex: 1; padding: 10px; border: none; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; transition: 0.2s; }
+    .btn-fire { background: #e53935; color: white; }
+    .btn-fire:hover { background: #d32f2f; }
+    .btn-reset { background: #455a64; color: white; }
+    .btn-reset:hover { background: #37474f; }
+    .btn-restart { background: #ff9800; color: #111; }
+    .btn-restart:hover { background: #fb8c00; }
+    .stats-box { margin-top: 12px; padding: 10px; background: #181a1d; border-radius: 8px; font-size: 12px; line-height: 1.6; border-left: 4px solid #ffca28; }
+    .target-banner { margin-top: 8px; padding: 8px; background: #2c333a; border-radius: 6px; font-size: 12px; text-align: center; color: #81c784; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <h1>🏰 Catapult Castle Siege Simulator</h1>
+
+  <div class="main-container">
+    <div class="canvas-container">
+      <canvas id="simCanvas" width="1350" height="550"></canvas>
+    </div>
+
+    <div class="controls-panel">
+      <!-- 1. Pullback Angle -->
+      <div class="control-group">
+        <label>Pullback Angle: <span><span id="valPull">45</span>°</span></label>
+        <input type="range" id="paramPull" min="15" max="75" value="45">
+      </div>
+
+      <!-- 2. Arm Length -->
+      <div class="control-group">
+        <label>Arm Length: <span><span id="valArm">120</span> cm</span></label>
+        <input type="range" id="paramArm" min="80" max="150" step="10" value="120">
+      </div>
+
+      <!-- 3. Band Tension -->
+      <div class="control-group">
+        <label>Band Tension: <span><span id="valTension">3</span></span></label>
+        <input type="range" id="paramTension" min="1" max="5" step="1" value="3">
+      </div>
+
+      <!-- 4. Pivot Height -->
+      <div class="control-group">
+        <label>Pivot Height: <span><span id="valPivotH">90</span> cm</span></label>
+        <input type="range" id="paramPivotH" min="60" max="130" step="10" value="90">
+      </div>
+
+      <!-- 5. Platform Height -->
+      <div class="control-group">
+        <label>Platform Height: <span><span id="valPlatform">30</span> cm</span></label>
+        <input type="range" id="paramPlatform" min="0" max="150" step="10" value="30">
+      </div>
+
+      <div class="btn-group">
+        <button class="btn-fire" id="fireBtn">Launch 🚀</button>
+        <div class="btn-row">
+          <button class="btn-reset" id="resetBtn">Reset Arm</button>
+          <button class="btn-restart" id="restartGameBtn">Restart Game 🔄</button>
+        </div>
+      </div>
+
+      <div class="target-banner" id="hitStatus">🎯 Destroy all 5 castles!</div>
+
+      <div class="stats-box">
+        <strong>Telemetry:</strong><br>
+        Initial Velocity ($v_0$): <span id="statV0">0.00</span> m/s<br>
+        Horizontal Range ($R$): <span id="statRange">0.00</span> m<br>
+        Maximum Height ($H_{max}$): <span id="statMaxH">0.00</span> m<br>
+        Castles Destroyed: <span id="statScore">0 / 5</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const pPull = document.getElementById('paramPull');
+    const pArm = document.getElementById('paramArm');
+    const pTension = document.getElementById('paramTension');
+    const pPivotH = document.getElementById('paramPivotH');
+    const pPlatform = document.getElementById('paramPlatform');
+
+    const vPull = document.getElementById('valPull');
+    const vArm = document.getElementById('valArm');
+    const vTension = document.getElementById('valTension');
+    const vPivotH = document.getElementById('valPivotH');
+    const vPlatform = document.getElementById('valPlatform');
+
+    const statV0 = document.getElementById('statV0');
+    const statRange = document.getElementById('statRange');
+    const statMaxH = document.getElementById('statMaxH');
+    const statScore = document.getElementById('statScore');
+    const hitStatus = document.getElementById('hitStatus');
+
+    // Web Audio API Synthesizer
+    let audioCtx = null;
+    function initAudio() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    function playLaunchSound() {
+      initAudio();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(140, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.18);
+      gain.gain.setValueAtTime(0.7, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.18);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.18);
+    }
+
+    function playHitSound() {
+      initAudio();
+      // White noise burst for castle stone collapse
+      const bufferSize = audioCtx.sampleRate * 0.4;
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = buffer;
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(600, audioCtx.currentTime);
+      filter.frequency.linearRampToValueAtTime(120, audioCtx.currentTime + 0.4);
+
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(1.0, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(audioCtx.destination);
+      noise.start();
+    }
+
+    function playFailSound() {
+      initAudio();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(80, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.22);
+      gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.22);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.22);
+    }
+
+    // Geometry & Scaling
+    const PIXEL_SCALE = 0.72; 
+    const GROUND_Y = 490;
+    const BASE_X = 85; 
+    const GRAVITY = 9.81 * 100;
+
+    let state = 'ready';
+    let currentArmAngle = 45;
+    const releaseAngle = -20;
+    let angularVel = 0;
+
+    let ball = { x: 0, y: 0, vx: 0, vy: 0, radius: 8 };
+    let trajectory = [];
+    let particles = [];
+
+    // 5 Historical Castles at varying distances & elevations
+    const castles = [
+      { id: 1, name: "Outpost 1", x: 420, y: GROUND_Y - 50, w: 46, h: 50, hit: false },
+      { id: 2, name: "Fortress 2", x: 670, y: GROUND_Y - 60, w: 54, h: 60, hit: false },
+      { id: 3, name: "Hill Bastion 3", x: 910, y: GROUND_Y - 110, w: 56, h: 60, hit: false },
+      { id: 4, name: "Cliff Citadel 4", x: 1110, y: GROUND_Y - 180, w: 60, h: 65, hit: false },
+      { id: 5, name: "Sky Keep 5", x: 1250, y: GROUND_Y - 220, w: 55, h: 65, hit: false }
+    ];
+
+    function updateLabels() {
+      vPull.innerText = pPull.value;
+      vArm.innerText = pArm.value;
+      vTension.innerText = pTension.value;
+      vPivotH.innerText = pPivotH.value;
+      vPlatform.innerText = pPlatform.value;
+    }
+
+    function getPivotCoords() {
+      const platH = parseFloat(pPlatform.value);
+      const pivH = parseFloat(pPivotH.value);
+      return {
+        x: BASE_X,
+        y: GROUND_Y - (platH + pivH) * PIXEL_SCALE,
+        platH_px: platH * PIXEL_SCALE
+      };
+    }
+
+    function getCupCoords(pivot, armLenCm, thetaDeg) {
+      const thetaRad = thetaDeg * (Math.PI / 180);
+      const armPx = armLenCm * PIXEL_SCALE;
+      return {
+        x: pivot.x - armPx * Math.sin(thetaRad),
+        y: pivot.y - armPx * Math.cos(thetaRad)
+      };
+    }
+
+    // Reset only arm and ball without rebuilding destroyed castles
+    function resetArmOnly() {
+      state = 'ready';
+      currentArmAngle = parseFloat(pPull.value);
+      trajectory = [];
+      statV0.innerText = "0.00";
+      statRange.innerText = "0.00";
+      statMaxH.innerText = "0.00";
+
+      const pivot = getPivotCoords();
+      const cup = getCupCoords(pivot, parseFloat(pArm.value), currentArmAngle);
+      ball.x = cup.x;
+      ball.y = cup.y;
+
+      draw();
+    }
+
+    // Restart entire game: restore all castles
+    function restartEntireGame() {
+      castles.forEach(c => c.hit = false);
+      updateScore();
+      hitStatus.innerText = "🎯 Destroy all 5 castles!";
+      hitStatus.style.color = "#81c784";
+      resetArmOnly();
+    }
+
+    function fire() {
+      if (state !== 'ready') return;
+      state = 'firing';
+      playLaunchSound();
+
+      const k = parseFloat(pTension.value) * 85;
+      const pullAngle = parseFloat(pPull.value);
+      const armLen = parseFloat(pArm.value);
+
+      const deltaTheta = (pullAngle - releaseAngle) * (Math.PI / 180);
+      const storedEnergy = 0.5 * k * Math.pow(deltaTheta, 2);
+      const inertia = (armLen / 100) * 1.5;
+      angularVel = Math.sqrt((2 * storedEnergy) / inertia) * (180 / Math.PI) * 0.46;
+    }
+
+    function triggerExplosion(x, y) {
+      for (let i = 0; i < 30; i++) {
+        particles.push({
+          x: x,
+          y: y,
+          vx: (Math.random() - 0.5) * 260,
+          vy: (Math.random() - 0.8) * 240,
+          radius: Math.random() * 4 + 2,
+          life: 1.0,
+          color: ['#757575', '#ff5722', '#ffeb3b', '#424242'][Math.floor(Math.random() * 4)]
+        });
+      }
+    }
+
+    function checkCastleHits() {
+      for (let c of castles) {
+        if (!c.hit) {
+          if (ball.x >= c.x - 4 && ball.x <= c.x + c.w + 4 &&
+              ball.y >= c.y - 12 && ball.y <= c.y + c.h) {
+            c.hit = true;
+            playHitSound();
+            triggerExplosion(c.x + c.w / 2, c.y + c.h / 2);
+            hitStatus.innerText = `💥 Castle Obliterated: ${c.name}!`;
+            hitStatus.style.color = "#ffeb3b";
+            updateScore();
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    function updateScore() {
+      const count = castles.filter(c => c.hit).length;
+      statScore.innerText = `${count} / 5`;
+      if (count === 5) {
+        hitStatus.innerText = "👑 Victory! All castles conquered!";
+        hitStatus.style.color = "#00e676";
+      }
+    }
+
+    // Mountainous Terrain Profile
+    function getTerrainElevation(x) {
+      if (x < 780) return GROUND_Y;
+      if (x < 1000) {
+        // Step 1: Rise to 80px high
+        const t = (x - 780) / (1000 - 780);
+        return GROUND_Y - 50 * (0.5 - 0.5 * Math.cos(t * Math.PI));
+      }
+      if (x < 1180) {
+        // Step 2: Steep cliff up to 120px high
+        const t = (x - 1000) / (1180 - 1000);
+        return GROUND_Y - 50 - 70 * (0.5 - 0.5 * Math.cos(t * Math.PI));
+      }
+      // Top plateaus
+      const t = Math.min(1, (x - 1180) / 140);
+      return GROUND_Y - 120 - 40 * t;
+    }
+
+    function updatePhysics(dt) {
+      const pivot = getPivotCoords();
+      const armLen = parseFloat(pArm.value);
+
+      if (state === 'firing') {
+        currentArmAngle -= angularVel * dt;
+
+        if (currentArmAngle <= releaseAngle) {
+          currentArmAngle = releaseAngle;
+          state = 'flying';
+
+          const rMeters = armLen / 100;
+          const omegaRad = angularVel * (Math.PI / 180);
+          const linearSpeed = omegaRad * rMeters * 0.96;
+
+          const releaseRad = releaseAngle * (Math.PI / 180);
+          ball.vx = linearSpeed * Math.cos(releaseRad) * 100;
+          ball.vy = -linearSpeed * Math.sin(releaseRad) * 100 - (linearSpeed * 76);
+
+          const cup = getCupCoords(pivot, armLen, currentArmAngle);
+          ball.x = cup.x;
+          ball.y = cup.y;
+          trajectory.push({ x: ball.x, y: ball.y });
+
+          statV0.innerText = linearSpeed.toFixed(2);
+        } else {
+          const cup = getCupCoords(pivot, armLen, currentArmAngle);
+          ball.x = cup.x;
+          ball.y = cup.y;
+        }
+      } else if (state === 'flying') {
+        ball.x += (ball.vx * dt) * PIXEL_SCALE;
+        ball.vy += (GRAVITY * dt);
+        ball.y += (ball.vy * dt) * PIXEL_SCALE;
+
+        trajectory.push({ x: ball.x, y: ball.y });
+
+        const groundLevel = getTerrainElevation(ball.x);
+        const hit = checkCastleHits();
+
+        if (hit) {
+          state = 'finished';
+        } else if (ball.y >= groundLevel - ball.radius || ball.x > canvas.width + 50) {
+          ball.y = Math.min(ball.y, groundLevel - ball.radius);
+          state = 'finished';
+          playFailSound();
+          hitStatus.innerText = "❌ Missed! Adjust your parameters and try again.";
+          hitStatus.style.color = "#ef5350";
+        }
+
+        if (state === 'finished') {
+          const rangeCm = (ball.x - pivot.x) / PIXEL_SCALE;
+          statRange.innerText = Math.max(0, rangeCm / 100).toFixed(2);
+
+          let highestPoint = GROUND_Y;
+          trajectory.forEach(p => { if (p.y < highestPoint) highestPoint = p.y; });
+          const maxHeightCm = (GROUND_Y - highestPoint) / PIXEL_SCALE;
+          statMaxH.innerText = (maxHeightCm / 100).toFixed(2);
+        }
+      }
+
+      for (let i = particles.length - 1; i >= 0; i--) {
+        let p = particles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += GRAVITY * 0.4 * dt;
+        p.life -= dt * 1.4;
+        if (p.life <= 0) particles.splice(i, 1);
+      }
+    }
+
+    // Detailed Castle Drawing
+    function drawCastle(ctx, c) {
+      if (c.hit) {
+        // Destroyed Castle Rubble
+        ctx.fillStyle = "#616161";
+        ctx.beginPath();
+        ctx.moveTo(c.x, c.y + c.h);
+        ctx.lineTo(c.x + c.w * 0.3, c.y + c.h - 14);
+        ctx.lineTo(c.x + c.w * 0.7, c.y + c.h - 10);
+        ctx.lineTo(c.x + c.w, c.y + c.h);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = "#424242";
+        ctx.stroke();
+        return;
+      }
+
+      // Stone Castle Walls
+      ctx.fillStyle = "#9e9e9e";
+      ctx.fillRect(c.x, c.y, c.w, c.h);
+      ctx.strokeStyle = "#424242";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(c.x, c.y, c.w, c.h);
+
+      // Left & Right Towers
+      const tw = c.w * 0.28;
+      const th = c.h + 12;
+      ctx.fillStyle = "#757575";
+      ctx.fillRect(c.x - 3, c.y - 12, tw, th);
+      ctx.strokeRect(c.x - 3, c.y - 12, tw, th);
+
+      ctx.fillRect(c.x + c.w - tw + 3, c.y - 12, tw, th);
+      ctx.strokeRect(c.x + c.w - tw + 3, c.y - 12, tw, th);
+
+      // Tower Battlements (Crenels)
+      ctx.fillStyle = "#616161";
+      ctx.fillRect(c.x - 4, c.y - 18, tw / 2, 6);
+      ctx.fillRect(c.x + tw / 2 - 1, c.y - 18, tw / 2, 6);
+      ctx.fillRect(c.x + c.w - tw + 2, c.y - 18, tw / 2, 6);
+      ctx.fillRect(c.x + c.w - tw / 2 + 3, c.y - 18, tw / 2, 6);
+
+      // Arch Gate
+      ctx.fillStyle = "#3e2723";
+      ctx.beginPath();
+      ctx.arc(c.x + c.w / 2, c.y + c.h - 14, 8, Math.PI, 0);
+      ctx.lineTo(c.x + c.w / 2 + 8, c.y + c.h);
+      ctx.lineTo(c.x + c.w / 2 - 8, c.y + c.h);
+      ctx.closePath();
+      ctx.fill();
+
+      // Red Flag
+      ctx.strokeStyle = "#212121";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(c.x + c.w / 2, c.y);
+      ctx.lineTo(c.x + c.w / 2, c.y - 15);
+      ctx.stroke();
+
+      ctx.fillStyle = "#d32f2f";
+      ctx.beginPath();
+      ctx.moveTo(c.x + c.w / 2, c.y - 15);
+      ctx.lineTo(c.x + c.w / 2 + 10, c.y - 10);
+      ctx.lineTo(c.x + c.w / 2, c.y - 5);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Sky gradient
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+      skyGrad.addColorStop(0, '#42a5f5');
+      skyGrad.addColorStop(1, '#e3f2fd');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Mountain / Rock Terrain Path
+      ctx.beginPath();
+      ctx.moveTo(0, GROUND_Y);
+      ctx.lineTo(780, GROUND_Y);
+      // Slope 1
+      ctx.bezierCurveTo(840, GROUND_Y, 920, GROUND_Y - 50, 1000, GROUND_Y - 50);
+      // Cliff 2
+      ctx.bezierCurveTo(1060, GROUND_Y - 50, 1120, GROUND_Y - 120, 1180, GROUND_Y - 120);
+      // Ridge 3
+      ctx.lineTo(1350, GROUND_Y - 160);
+      ctx.lineTo(1350, canvas.height);
+      ctx.lineTo(0, canvas.height);
+      ctx.closePath();
+
+      ctx.fillStyle = '#4caf50';
+      ctx.fill();
+      ctx.strokeStyle = '#2e7d32';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      // Draw All Castles
+      castles.forEach(c => drawCastle(ctx, c));
+
+      // Catapult Base & Platform
+      const pivot = getPivotCoords();
+      const armLen = parseFloat(pArm.value);
+      const platH_px = pivot.platH_px;
+      const baseTop = GROUND_Y - platH_px;
+
+      if (platH_px > 0) {
+        ctx.fillStyle = '#4e342e';
+        ctx.fillRect(BASE_X - 50, baseTop, 100, platH_px);
+        ctx.strokeStyle = '#2d1b17';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(BASE_X - 50, baseTop, 100, platH_px);
+      }
+
+      // Wooden Triangle Frame
+      ctx.beginPath();
+      ctx.moveTo(BASE_X - 40, baseTop);
+      ctx.lineTo(BASE_X + 38, baseTop);
+      ctx.lineTo(pivot.x, pivot.y);
+      ctx.closePath();
+      ctx.fillStyle = '#a16b47';
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#5c381e';
+      ctx.stroke();
+
+      for (let i = 0; i < 5; i++) {
+        const hy = baseTop - 25 - (i * 15);
+        ctx.beginPath();
+        ctx.arc(BASE_X, hy, 3, 0, Math.PI * 2);
+        ctx.fillStyle = '#2c1708';
+        ctx.fill();
+      }
+
+      // Elastic Tension Band
+      const anchorX = BASE_X + 20;
+      const anchorY = baseTop - 8 - (pTension.value * 4);
+      const elasticPoint = getCupCoords(pivot, armLen * 0.45, currentArmAngle);
+
+      ctx.beginPath();
+      ctx.moveTo(anchorX, anchorY);
+      ctx.lineTo(elasticPoint.x, elasticPoint.y);
+      ctx.strokeStyle = '#e53935';
+      ctx.lineWidth = 3 + parseInt(pTension.value);
+      ctx.stroke();
+
+      // Catapult Arm
+      ctx.save();
+      ctx.translate(pivot.x, pivot.y);
+      ctx.rotate(-currentArmAngle * (Math.PI / 180));
+
+      const armPx = armLen * PIXEL_SCALE;
+      ctx.fillStyle = '#8d5b34';
+      ctx.fillRect(-6, -armPx, 12, armPx + 14);
+      ctx.strokeStyle = '#4e2c11';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(-6, -armPx, 12, armPx + 14);
+
+      for (let h = 18; h < armPx; h += 16) {
+        ctx.beginPath();
+        ctx.arc(0, -h, 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#2c1708';
+        ctx.fill();
+      }
+
+      // Cup
+      ctx.beginPath();
+      ctx.arc(0, -armPx, 11, 0, Math.PI);
+      ctx.fillStyle = '#b08456';
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+
+      // Center Pivot Pin
+      ctx.beginPath();
+      ctx.arc(pivot.x, pivot.y, 5, 0, Math.PI * 2);
+      ctx.fillStyle = '#cfd8dc';
+      ctx.fill();
+      ctx.stroke();
+
+      // Ball
+      const cup = getCupCoords(pivot, armLen, currentArmAngle);
+      const bx = (state === 'flying' || state === 'finished') ? ball.x : cup.x;
+      const by = (state === 'flying' || state === 'finished') ? ball.y : cup.y;
+
+      ctx.beginPath();
+      ctx.arc(bx, by, ball.radius, 0, Math.PI * 2);
+      ctx.fillStyle = '#ff6f00';
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#fff';
+      ctx.stroke();
+
+      // Trajectory
+      if (trajectory.length > 1) {
+        ctx.beginPath();
+        ctx.setLineDash([5, 4]);
+        ctx.moveTo(trajectory[0].x, trajectory[0].y);
+        for (let i = 1; i < trajectory.length; i++) {
+          ctx.lineTo(trajectory[i].x, trajectory[i].y);
+        }
+        ctx.strokeStyle = 'rgba(230, 81, 0, 0.85)';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      // Explosion Particles
+      particles.forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius * p.life, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.life;
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+      });
+    }
+
+    let lastTime = performance.now();
+    function loop(currentTime) {
+      const dt = Math.min((currentTime - lastTime) / 1000, 0.05);
+      lastTime = currentTime;
+
+      if (state === 'firing' || state === 'flying' || particles.length > 0) {
+        updatePhysics(dt);
+      }
+
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    [pPull, pArm, pTension, pPivotH, pPlatform].forEach(input => {
+      input.addEventListener('input', () => {
+        updateLabels();
+        if (state === 'ready') {
+          currentArmAngle = parseFloat(pPull.value);
+          const pivot = getPivotCoords();
+          const cup = getCupCoords(pivot, parseFloat(pArm.value), currentArmAngle);
+          ball.x = cup.x;
+          ball.y = cup.y;
+        }
+      });
+    });
+
+    document.getElementById('fireBtn').addEventListener('click', fire);
+    document.getElementById('resetBtn').addEventListener('click', resetArmOnly);
+    document.getElementById('restartGameBtn').addEventListener('click', restartEntireGame);
+
+    updateLabels();
+    resetArmOnly();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
